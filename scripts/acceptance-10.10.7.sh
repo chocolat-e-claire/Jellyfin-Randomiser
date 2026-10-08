@@ -3,9 +3,9 @@ set -euo pipefail
 
 BASE_URL="${JELLYFIN_URL:-http://127.0.0.1:8096}"
 ADMIN_USER="${JELLYFIN_ADMIN_USER:-ci-admin}"
-ADMIN_PASS="${JELLYFIN_ADMIN_PASS:-CiAdmin-10.10.7!}"
+ADMIN_PASS="${JELLYFIN_ADMIN_PASS:-ci-admin-password}"
 TEST_USER="${JELLYFIN_TEST_USER:-ci-randomizer}"
-TEST_PASS="${JELLYFIN_TEST_PASS:-CiRandomizer-10.10.7!}"
+TEST_PASS="${JELLYFIN_TEST_PASS:-ci-randomizer-password}"
 
 MEDIA_ROOT="${MEDIA_ROOT:-$PWD/smoke-media}"
 TMP="${TMPDIR:-/tmp}/jfr-acceptance"
@@ -55,7 +55,8 @@ wait_for_http /health
 echo "== Complete first-run setup =="
 curl -fsS -X POST "$BASE_URL/Startup/Configuration" \
   -H 'Content-Type: application/json' \
-  --data '{"UICulture":"en-US","MetadataCountryCode":"US","PreferredMetadataLanguage":"en"}' >/dev/null
+  --data '{"ServerName":"Jellyfin Randomizer CI","UICulture":"en-US","MetadataCountryCode":"US","PreferredMetadataLanguage":"en"}' >/dev/null
+curl -fsS "$BASE_URL/Startup/User" >/dev/null
 curl -fsS -X POST "$BASE_URL/Startup/User" \
   -H 'Content-Type: application/json' \
   --data "{\"Name\":\"$ADMIN_USER\",\"Password\":\"$ADMIN_PASS\"}" >/dev/null
