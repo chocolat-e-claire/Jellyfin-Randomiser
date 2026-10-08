@@ -11,7 +11,7 @@ MEDIA_ROOT="${MEDIA_ROOT:-$PWD/smoke-media}"
 TMP="${TMPDIR:-/tmp}/jfr-acceptance"
 mkdir -p "$TMP"
 
-AUTH_HEADER='X-Emby-Authorization: MediaBrowser Client="Jellyfin Randomizer CI", Device="GitHub Actions", DeviceId="jfr-ci", Version="0.1"'
+AUTH_HEADER='Authorization: MediaBrowser Client="Jellyfin Randomizer CI", Device="GitHub Actions", DeviceId="jfr-ci", Version="0.1"'
 
 api() {
   local method="$1"; shift
