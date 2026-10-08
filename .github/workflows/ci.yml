@@ -65,5 +65,29 @@ jobs:
           asset="release/Jellyfin.Plugin.Randomizer_${VERSION}.zip"
           test -f "$asset"
           if ! gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "v${VERSION}" "$asset"               --repo "$GITHUB_REPOSITORY"               --title "Jellyfin Randomizer v${VERSION}"               --notes "Fix plugin configuration saving using Jellyfin's standard plugin configuration API."
+            gh release create "v${VERSION}" "$asset"               --repo "$GITHUB_REPOSITORY"               --title "Jellyfin Randomizer v${VERSION}"               --notes "Verified release with Jellyfin standard plugin configuration API."
           fi
+
+          url="https://github.com/$GITHUB_REPOSITORY/releases/download/v${VERSION}/Jellyfin.Plugin.Randomizer_${VERSION}.zip"
+          rm -f /tmp/published.zip
+          for attempt in {1..10}; do
+            if curl -fsSL "$url" -o /tmp/published.zip; then
+              break
+            fi
+            sleep 2
+          done
+          test -s /tmp/published.zip
+
+          local_md5=$(md5sum "$asset" | cut -d' ' -f1)
+          remote_md5=$(md5sum /tmp/published.zip | cut -d' ' -f1)
+          local_sha=$(sha256sum "$asset" | cut -d' ' -f1)
+          remote_sha=$(sha256sum /tmp/published.zip | cut -d' ' -f1)
+
+          echo "Local MD5:  $local_md5"
+          echo "Remote MD5: $remote_md5"
+          echo "Local SHA256:  $local_sha"
+          echo "Remote SHA256: $remote_sha"
+
+          test "$local_md5" = "$remote_md5"
+          test "$local_sha" = "$remote_sha"
+          test "$(stat -c '%s' "$asset")" = "$(stat -c '%s' /tmp/published.zip)"
