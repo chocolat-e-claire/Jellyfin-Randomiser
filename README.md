@@ -14,16 +14,22 @@ repository link: https://raw.githubusercontent.com/chocolat-e-claire/Jellyfin-Ra
 - Server-side permission filtering for explicit IDs.
 - Optional per-user recent-result avoidance (in-memory).
 - Normal Jellyfin details/playback routes.
-- Responsive keyboard-accessible modal.
-- Server-selected roulette presentation.
+- Responsive standalone Randomizer page.
+- Server-selected roulette-ready result presentation.
 - Plugin configuration page.
 - Unit-test and GitHub Actions scaffolding.
 
 ## Non-invasive Web integration
 
-The plugin does **not** patch Jellyfin Web files, index.html, server binaries, database schema, or Jellyfin source. JavaScript and CSS are embedded in the plugin assembly and injected into /web responses in the ASP.NET Core pipeline.
+The plugin does **not** patch Jellyfin Web files, index.html, server binaries, database schema, or Jellyfin source.
 
-No modified Jellyfin Web build and no core-file replacement is required.
+The Randomizer UI is exposed as an authenticated standalone page at:
+
+`/Randomizer/Page`
+
+That page uses the plugin's server-side APIs and the current authenticated Jellyfin user. It does not intercept or rewrite `/web` responses.
+
+The repository still contains the earlier embedded `randomizer.js` and `randomizer.css` resources for future Web integration work, but the current safe page does not rely on server-side Web response interception.
 
 ## Security
 
@@ -33,19 +39,17 @@ All selection is performed server-side using the authenticated Jellyfin user. Cl
 
 Requires .NET 8 SDK and network access to restore Jellyfin 10.10.7 packages.
 
-Commands: dotnet restore Jellyfin-Randomizer.sln; dotnet build Jellyfin-Randomizer.sln --configuration Release; dotnet test Jellyfin-Randomizer.sln --configuration Release.
+Commands: `dotnet restore Jellyfin-Randomizer.sln`; `dotnet build Jellyfin-Randomizer.sln --configuration Release`; `dotnet test Jellyfin-Randomizer.sln --configuration Release`.
 
 The CI workflow performs the same restore/build/test sequence.
-
-**This session has not run the .NET build or a live Jellyfin 10.10.7 acceptance test.** The branch is not represented as live-tested.
-
-## Install
-
-Build Release, then copy Jellyfin.Plugin.Randomizer.dll and meta.json into a plugin folder such as <jellyfin-data>/plugins/Jellyfin-Randomizer_0.1.0.0/. Restart Jellyfin and hard-refresh Jellyfin Web.
 
 ## Compatibility
 
 Only **Jellyfin 10.10.7** is advertised. Later releases require a separate ABI compatibility review.
+
+## Current development status
+
+The stable `main` branch is the proven server/configuration release. The standalone Randomizer page is being developed on a separate branch and must pass CI and a controlled Jellyfin 10.10.7 test before it is merged or published.
 
 ## License
 
