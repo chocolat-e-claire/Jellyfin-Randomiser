@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Jellyfin Randomizer</title>
+    <style>
+        :root{color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+        body{margin:0;background:#101010;color:#fff}
+        *{box-sizing:border-box}
+        .wrap{max-width:900px;margin:0 auto;padding:24px}
+        .card{background:#1b1b1b;border-radius:12px;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,.28)}
+        h1,h2{margin:.1rem 0 .8rem}.muted{opacity:.72}
+        .grid{display:grid;gap:12px}.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+        label{display:block;font-weight:600}.field{display:flex;flex-direction:column;gap:6px}
+        select,input[type=search],button{font:inherit}
+        select,input[type=search]{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #444;background:#121212;color:#fff}
+        button{padding:10px 14px;border:0;border-radius:8px;background:#4c8dff;color:#fff;cursor:pointer}
+        button.secondary{background:#333}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+        .results{max-height:280px;overflow:auto;border:1px solid #333;border-radius:8px;padding:8px}
+        .results label{font-weight:400;padding:7px;border-radius:6px}.results label:hover{background:#242424}
+        .controls{display:flex;flex-wrap:wrap;gap:16px;margin-top:16px}
+        .controls label{font-weight:400}.result{margin-top:18px;padding:18px;border-radius:10px;background:#232323}
+        .error{margin-top:12px;color:#ffb4b4}.hidden{display:none}
+        @media(max-width:650px){.two{grid-template-columns:1fr}.wrap{padding:12px}}
+    </style>
+</head>
+<body>
+<main class="wrap">
+    <section class="card">
+        <h1>🎲 Jellyfin Randomizer</h1>
+        <p class="muted">Random selection is performed on the Jellyfin server using your current permissions.</p>
+
+        <div class="grid two">
+            <div class="field">
+                <label for="library">Library</label>
+                <select id="library"></select>
+            </div>
+            <div class="field">
+                <label for="type">Content</label>
+                <select id="type">
+                    <option value="Movie">Movies</option>
+                    <option value="Series">TV Shows</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="field" style="margin-top:12px">
+            <label for="search">Search titles</label>
+            <input id="search" type="search" placeholder="Optional title filter">
+        </div>
+
+        <div id="results" class="results" style="margin-top:12px"></div>
+
+        <div id="seriesControls" class="controls hidden">
+            <label><input type="radio" name="mode" value="RandomShow" checked> Random show</label>
+            <label><input type="radio" name="mode" value="RandomEpisode"> Random episode</label>
+            <div class="field" style="min-width:190px">
+                <label for="strategy">Episode strategy</label>
+                <select id="strategy">
+                    <option value="EqualEpisode">Equal per episode</option>
+                    <option value="EqualShow">Equal per show</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="field" style="min-width:170px">
+                <label for="watched">Watched filter</label>
+                <select id="watched">
+                    <option value="All">All</option>
+                    <option value="Unwatched">Unwatched</option>
+                    <option value="Watched">Watched</option>
+                </select>
+            </div>
+            <div class="field" style="min-width:210px">
+                <label for="history">Recent-result avoidance</label>
+                <select id="history">
+                    <option value="0">No history avoidance</option>
+                    <option value="1">Avoid 1 recent result</option>
+                    <option value="5">Avoid 5 recent results</option>
+                    <option value="10">Avoid 10 recent results</option>
+                    <option value="20">Avoid 20 recent results</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="randomize">Randomize</button>
+            <button id="clear" class="secondary">Clear selection</button>
+            <button id="jellyfin" class="secondary">Open Jellyfin</button>
+        </div>
+
+        <div id="message" class="error"></div>
+        <div id="result" class="result hidden"></div>
+    </section>
+</main>
+
+<script>
+(function(){
+    'use strict';
+
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+
+    const api = async (url, options = {}) => {
+        const response = await fetch(url, {
+            credentials: 'same-origin',
+            ...options,
+            headers: {'Content-Type':'application/json', ...(options.headers || {})}
+        });
+        if (!response.ok) {
+            throw new Error(await response.text() || ('HTTP ' + response.status));
+        }
+        return response.json();
+    };
+
+    let libraries = [];
+
+    function libraryId() {
+        return $('library').value || '';
+    }
+
+    function selectedIds() {
+        return [...document.querySelectorAll('#results input[type="checkbox"]:checked')].map(x => x.value);
+    }
+
+    function mode() {
+        if ($('type').value === 'Movie') return 'RandomMovie';
+        return document.querySelector('input[name="mode"]:checked')?.value || 'RandomShow';
+    }
+
+    function showMessage(message) {
+        $('message').textContent = message || '';
+    }
+
+    async function loadLibraries() {
+        libraries = await api('/Randomizer/Libraries');
+        $('library').innerHTML =
+            '<option value="">Entire accessible library</option>' +
+            libraries.map(x => '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>').join('');
+    }
+
+    async function loadTitles() {
+        const type = $('type').value;
+        const query = new URLSearchParams({
+            itemType: type,
+            search: $('search').value,
+            limit: '100'
+        });
+        if (libraryId()) query.set('libraryId', libraryId());
+
+        const data = await api('/Randomizer/Search?' + query.toString());
+        $('results').innerHTML = data.length
+            ? data.map(x => '<label><input type="checkbox" value="' + esc(x.id) + '"> ' + esc(x.name) + '</label>').join('')
+            : '<span class="muted">No matching titles.</span>';
+    }
+
+    function updateControls() {
+        $('seriesControls').classList.toggle('hidden', $('type').value !== 'Series');
+    }
+
+    async function runRandomizer() {
+        showMessage('');
+        $('result').classList.add('hidden');
+        $('randomize').disabled = true;
+
+        try {
+            const body = {
+                mode: mode(),
+                libraryId: libraryId() || null,
+                itemIds: selectedIds(),
+                strategy: $('strategy').value,
+                watched: $('watched').value,
+                avoidRecent: Number($('history').value)
+            };
+
+            const result = await api('/Randomizer/Randomize', {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+
+            const episode = result.seriesName
+                ? '<p><strong>' + esc(result.seriesName) + '</strong> · S' +
+                  String(result.seasonNumber ?? 0).padStart(2,'0') + 'E' +
+                  String(result.episodeNumber ?? 0).padStart(2,'0') + '</p>'
+                : '';
+
+            $('result').innerHTML =
+                '<h2>' + esc(result.name) + '</h2>' +
+                episode +
+                '<p>' + esc(result.overview || 'No overview available.') + '</p>' +
+                '<div class="actions">' +
+                  '<button id="openDetails">Open Details</button>' +
+                '</div>';
+
+            $('openDetails').onclick = () => {
+                location.href = '/web/index.html#!/details?id=' + encodeURIComponent(result.itemId);
+            };
+
+            $('result').classList.remove('hidden');
+        } catch (error) {
+            showMessage(error.message || 'Randomization failed.');
+        } finally {
+            $('randomize').disabled = false;
+        }
+    }
+
+    $('type').addEventListener('change', async () => {
+        updateControls();
+        showMessage('');
+        await loadTitles();
+    });
+
+    $('library').addEventListener('change', loadTitles);
+    $('search').addEventListener('input', () => {
+        clearTimeout(window.__jfrSearchTimer);
+        window.__jfrSearchTimer = setTimeout(loadTitles, 250);
+    });
+
+    $('clear').addEventListener('click', () => {
+        document.querySelectorAll('#results input[type="checkbox"]').forEach(x => x.checked = false);
+    });
+
+    $('randomize').addEventListener('click', runRandomizer);
+    $('jellyfin').addEventListener('click', () => location.href = '/web/index.html');
+
+    (async function init() {
+        try {
+            updateControls();
+            await loadLibraries();
+            await loadTitles();
+        } catch (error) {
+            showMessage(error.message || 'Unable to load the Randomizer.');
+        }
+    }());
+}());
+</script>
+</body>
+</html>
