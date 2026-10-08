@@ -9,7 +9,7 @@
     "versions": [
       {
         "version": "0.1.0.4",
-        "changelog": "Fix Jellyfin 10.10.7 plugin configuration page rendering.",
+        "changelog": "Safe server-only release; removed unsafe web response interception.",
         "targetAbi": "10.10.7.0",
         "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.4/Jellyfin.Plugin.Randomizer_0.1.0.4.zip",
         "checksum": "58e0338db7b47c31394cbf89f0d041e9",
