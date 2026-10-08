@@ -24,24 +24,24 @@ jobs:
           cp Jellyfin.Plugin.Randomizer/meta.json package/Jellyfin.Plugin.Randomizer/
           find package/Jellyfin.Plugin.Randomizer -exec touch -d '1980-01-01 00:00:00 UTC' {} +
           cd package/Jellyfin.Plugin.Randomizer
-          zip -X -r ../../Jellyfin.Plugin.Randomizer_0.1.0.3.zip .
-          md5sum ../../Jellyfin.Plugin.Randomizer_0.1.0.3.zip
+          zip -X -r ../../Jellyfin.Plugin.Randomizer_0.1.0.4.zip .
+          md5sum ../../Jellyfin.Plugin.Randomizer_0.1.0.4.zip
       - name: Upload plugin package
         uses: actions/upload-artifact@v4
         with:
-          name: Jellyfin.Plugin.Randomizer_0.1.0.3
-          path: Jellyfin.Plugin.Randomizer_0.1.0.3.zip
+          name: Jellyfin.Plugin.Randomizer_0.1.0.4
+          path: Jellyfin.Plugin.Randomizer_0.1.0.4.zip
       - name: Publish GitHub Release and repository manifest
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          CHECKSUM=$(md5sum Jellyfin.Plugin.Randomizer_0.1.0.3.zip | cut -d ' ' -f1)
-          if ! gh release view v0.1.0.3 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create v0.1.0.3 Jellyfin.Plugin.Randomizer_0.1.0.3.zip \
+          CHECKSUM=$(md5sum Jellyfin.Plugin.Randomizer_0.1.0.4.zip | cut -d ' ' -f1)
+          if ! gh release view v0.1.0.4 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create v0.1.0.4 Jellyfin.Plugin.Randomizer_0.1.0.4.zip \
               --repo "$GITHUB_REPOSITORY" \
-              --title "Jellyfin Randomizer v0.1.0.3" \
-              --notes "Fix Jellyfin 10.10.7 plugin configuration page rendering." \
+              --title "Jellyfin Randomizer v0.1.0.4" \
+              --notes "Remove unsafe web response interception; server-only safe release." \
               --target "$GITHUB_SHA"
           fi
           python3 - <<PY
@@ -50,10 +50,10 @@ jobs:
           p=Path("manifest.json")
           data=json.loads(p.read_text())
           v=data[0]["versions"][0]
-          v["version"]="0.1.0.3"
+          v["version"]="0.1.0.4"
           v["changelog"]="Fix Jellyfin 10.10.7 plugin configuration page rendering."
           v["targetAbi"]="10.10.7.0"
-          v["sourceUrl"]="https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.3/Jellyfin.Plugin.Randomizer_0.1.0.3.zip"
+          v["sourceUrl"]="https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.4/Jellyfin.Plugin.Randomizer_0.1.0.4.zip"
           v["checksum"]="$CHECKSUM"
           p.write_text(json.dumps(data, indent=2)+"\n")
           PY
@@ -61,6 +61,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add manifest.json
           if ! git diff --cached --quiet; then
-            git commit -m "Update plugin manifest for v0.1.0.3"
+            git commit -m "Update plugin manifest for v0.1.0.4"
             git push
           fi
