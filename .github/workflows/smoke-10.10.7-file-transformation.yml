@@ -52,8 +52,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm jellyfin/jellyfin:10.10.7 \
-            sh -c 'find /jellyfin -type f -print0 | sort -z | xargs -0 sha256sum' \
+          docker run --rm --entrypoint sh jellyfin/jellyfin:10.10.7 \
+            -c 'find /jellyfin -type f -print0 | sort -z | xargs -0 sha256sum' \
             > pristine-jellyfin.sha256
 
 
