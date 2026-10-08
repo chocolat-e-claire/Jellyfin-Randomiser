@@ -132,14 +132,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf .ci-playwright
+          mkdir -p .ci-playwright
           docker run --rm \
             --network host \
             -v "$PWD/scripts:/tests:ro" \
+            -v "$PWD/.ci-playwright:/playwright" \
             -e JELLYFIN_URL=http://127.0.0.1:8096 \
             -e JELLYFIN_USER=ci-randomizer \
             -e JELLYFIN_PASSWORD=ci-randomizer-password \
+            -e PLAYWRIGHT_MODULE=/playwright/node_modules/playwright \
             mcr.microsoft.com/playwright:v1.49.1-noble \
-            node /tests/browser-10.10.7.mjs
+            bash -lc 'cd /playwright && npm init -y >/dev/null 2>&1 && npm install --no-audit --no-fund --save-exact playwright@1.49.1 >/dev/null 2>&1 && node /tests/browser-10.10.7.mjs'
 
       - name: Test clean uninstall and server restart
         shell: bash
