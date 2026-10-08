@@ -3,7 +3,8 @@
 
     const CONFIG_ID = '4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41';
     const BUTTON_MARK = 'data-randomizer-button';
-    const API = window.ApiClient;
+    let API = null;
+    let started = false;
     const C = window.JellyfinRandomizerConfig || {};
     let type = null;
 
@@ -286,25 +287,49 @@
         window.requestAnimationFrame(addButton);
     }
 
-    if (!API) {
-        console.error('Jellyfin Randomizer requires Jellyfin Web ApiClient.');
-        return;
+    function start() {
+        if (started) {
+            return true;
+        }
+
+        API = window.ApiClient || null;
+        if (!API) {
+            return false;
+        }
+
+        started = true;
+
+        API.getPluginConfiguration(CONFIG_ID)
+            .then(config => Object.assign(C, {
+                enabled: config.Enabled !== false,
+                DefaultEpisodeStrategy: config.DefaultEpisodeStrategy,
+                DefaultWatchedFilter: config.DefaultWatchedFilter,
+                AnimationEnabled: config.AnimationEnabled,
+                AnimationDurationMs: config.AnimationDurationMs,
+                HistorySize: config.HistorySize
+            }))
+            .catch(() => undefined)
+            .finally(refresh);
+
+        new MutationObserver(refresh).observe(document.body, { childList: true, subtree: true });
+        window.addEventListener('hashchange', refresh);
+        window.setInterval(refresh, 1000);
+        refresh();
+        return true;
     }
 
-    API.getPluginConfiguration(CONFIG_ID)
-        .then(config => Object.assign(C, {
-            enabled: config.Enabled !== false,
-            DefaultEpisodeStrategy: config.DefaultEpisodeStrategy,
-            DefaultWatchedFilter: config.DefaultWatchedFilter,
-            AnimationEnabled: config.AnimationEnabled,
-            AnimationDurationMs: config.AnimationDurationMs,
-            HistorySize: config.HistorySize
-        }))
-        .catch(() => undefined)
-        .finally(refresh);
+    let attempts = 0;
+    const timer = window.setInterval(() => {
+        if (start()) {
+            window.clearInterval(timer);
+            return;
+        }
 
-    new MutationObserver(refresh).observe(document.body, { childList: true, subtree: true });
-    window.addEventListener('hashchange', refresh);
-    window.setInterval(refresh, 1000);
-    refresh();
+        attempts += 1;
+        if (attempts >= 300) {
+            window.clearInterval(timer);
+            console.warn('Jellyfin Randomizer waited 30 seconds for the Jellyfin Web ApiClient.');
+            window.clearInterval(timer);
+        }
+    }, 100);
 }());
