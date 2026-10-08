@@ -39,3 +39,31 @@ jobs:
         with:
           name: Jellyfin.Plugin.Randomizer-package
           path: Jellyfin.Plugin.Randomizer_*.zip
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Determine version
+        id: version
+        run: echo "version=$(python3 -c 'import json; print(json.load(open("Jellyfin.Plugin.Randomizer/meta.json"))["version"])')" >> "$GITHUB_OUTPUT"
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Jellyfin.Plugin.Randomizer-package
+          path: release
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          asset="release/Jellyfin.Plugin.Randomizer_${VERSION}.zip"
+          test -f "$asset"
+          if ! gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "v${VERSION}" "$asset"               --repo "$GITHUB_REPOSITORY"               --title "Jellyfin Randomizer v${VERSION}"               --notes "Fix plugin configuration saving using Jellyfin's standard plugin configuration API."
+          fi
