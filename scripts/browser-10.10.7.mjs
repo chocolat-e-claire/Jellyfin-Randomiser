@@ -213,7 +213,7 @@ try {
   await waitFor(page.locator('#jfr-play'), 'Movies result Play button appears');
   const pageCountBeforePlay = context.pages().length;
   await page.locator('#jfr-play').click();
-  await page.waitForURL(/#!\/details\?id=/, { timeout: 30000 });
+  await page.waitForFunction(() => /^#\/details\?id=/.test(location.hash), undefined, { timeout: 30000 });
   await page.waitForFunction(() => window.__jfrNativePlayClicked === true, undefined, { timeout: 30000 });
 
   if (context.pages().length !== pageCountBeforePlay) {
@@ -265,7 +265,7 @@ try {
   console.log('PASS: TV Random Episode returns an actual fixture episode');
 
   await page.locator('#jfr-details').click();
-  await page.waitForURL(/#!\/details\?id=/, { timeout: 30000 });
+  await page.waitForFunction(() => /^#\/details\?id=/.test(location.hash), undefined, { timeout: 30000 });
   console.log('PASS: TV result uses normal Jellyfin details route');
 
   await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
