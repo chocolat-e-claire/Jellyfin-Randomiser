@@ -48,6 +48,15 @@ jobs:
 
           chmod -R a+rwx smoke-config
 
+      - name: Capture pristine Jellyfin file hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm jellyfin/jellyfin:10.10.7 \
+            sh -c 'find /jellyfin -type f -print0 | sort -z | xargs -0 sha256sum' \
+            > pristine-jellyfin.sha256
+
+
       - name: Start isolated Jellyfin 10.10.7
         shell: bash
         run: |
@@ -91,7 +100,16 @@ jobs:
 
           echo "healthy=$healthy injected=$injected"
           [ "$healthy" = true ]
+          loader_count="$(curl -fsS http://127.0.0.1:8096/web/index.html | grep -o 'data-jellyfin-randomizer-loader' | wc -l)"
+          test "$loader_count" -eq 2
+          echo "Randomizer loader tag count: $loader_count"
+
           [ "$injected" = true ]
+
+          docker exec jellyfin-randomizer-acceptance \
+            sh -c 'find /jellyfin -type f -print0 | sort -z | xargs -0 sha256sum' \
+            > jellyfin-with-randomizer.sha256
+          diff -u pristine-jellyfin.sha256 jellyfin-with-randomizer.sha256
 
           docker logs jellyfin-randomizer-acceptance 2>&1 | tee integration-startup.log
           grep -F 'Loaded plugin: File Transformation 2.5.9.0' integration-startup.log
@@ -150,6 +168,12 @@ jobs:
           done
 
           curl -fsS http://127.0.0.1:8096/health >/dev/null
+          docker exec jellyfin-randomizer-acceptance \
+            sh -c 'find /jellyfin -type f -print0 | sort -z | xargs -0 sha256sum' \
+            > jellyfin-after-uninstall.sha256
+          diff -u pristine-jellyfin.sha256 jellyfin-after-uninstall.sha256
+
+
           if curl -fsS http://127.0.0.1:8096/web/index.html | grep -Fq 'data-jellyfin-randomizer-loader'; then
             echo "Randomizer Web loader remained after plugin removal."
             exit 1
@@ -157,6 +181,19 @@ jobs:
 
           docker logs jellyfin-randomizer-acceptance 2>&1 | tee uninstall.log
           ! grep -Eiq 'Unhandled exception|fail:.*Jellyfin.Plugin.Randomizer|Application startup exception|host terminated unexpectedly' uninstall.log
+
+      - name: Upload integration diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellyfin-10.10.7-integration-diagnostics
+          if-no-files-found: ignore
+          path: |
+            integration-startup.log
+            uninstall.log
+            pristine-jellyfin.sha256
+            jellyfin-with-randomizer.sha256
+            jellyfin-after-uninstall.sha256
 
       - name: Cleanup
         if: always()
@@ -220,6 +257,15 @@ jobs:
           docker logs jellyfin-randomizer-no-ft 2>&1 | tee no-ft.log
           grep -F 'Randomizer could not find the File Transformation assembly.' no-ft.log
           ! grep -Eiq 'Unhandled exception|fail:.*Jellyfin.Plugin.Randomizer|Application startup exception|host terminated unexpectedly' no-ft.log
+
+      - name: Upload no-File-Transformation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellyfin-10.10.7-no-file-transformation-diagnostics
+          if-no-files-found: ignore
+          path: |
+            no-ft.log
 
       - name: Cleanup
         if: always()

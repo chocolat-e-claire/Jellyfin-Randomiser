@@ -263,6 +263,17 @@ print("Search result:", name)
 assert name == "Allowed Movie 1", items
 PY
 
+echo "== Verify search hard cap =="
+SEARCH_CAPPED="$(user_get '/Randomizer/Search?itemType=Movie&limit=1000')"
+export SEARCH_CAPPED
+python3 - <<'PY'
+import json, os
+items = json.loads(os.environ["SEARCH_CAPPED"])
+print("Search limit=1000 returned:", len(items), "items")
+assert len(items) <= 100, items
+PY
+
+
 echo "== Resolve fixture IDs =="
 ALL_ITEMS="$(admin_get '/Items?Recursive=true&IncludeItemTypes=Movie,Series,Episode&Limit=500')"
 USER_ITEMS="$(user_get "/Users/$TEST_USER_ID/Items?Recursive=true&IncludeItemTypes=Movie,Series,Episode&Limit=500")"
@@ -375,6 +386,40 @@ if [ "$UNWATCHED_STATUS" -eq 200 ]; then
   exit 1
 fi
 
+echo "== Unwatched filter across accessible library =="
+UNWATCHED_ALL="$(randomize "$USER_TOKEN" RandomMovie "$ALLOWED_MOVIES_LIB" '[]' Unwatched 0 EqualEpisode)"
+export UNWATCHED_ALL ALLOWED_MOVIE_ID
+python3 - <<'PY'
+import json, os
+result = json.loads(os.environ["UNWATCHED_ALL"])
+print("Accessible-library unwatched result:", result)
+assert result["itemType"] == "Movie", result
+assert result["itemId"] != os.environ["ALLOWED_MOVIE_ID"], result
+PY
+
+echo "== Empty/no-eligible result =="
+set +e
+EMPTY_STATUS="$(curl -sS -o "$TMP/empty.out" -w '%{http_code}' -X POST \
+  -H "X-Emby-Token: $USER_TOKEN" \
+  -H 'Content-Type: application/json' \
+  "$BASE_URL/Randomizer/Randomize" \
+  --data "$(python3 - "$ALLOWED_MOVIES_LIB" "$ALLOWED_MOVIE_ID" <<'PY'
+import json, sys
+print(json.dumps({
+    "mode": "RandomMovie",
+    "libraryId": sys.argv[1],
+    "itemIds": [sys.argv[2]],
+    "strategy": "EqualEpisode",
+    "watched": "Watched",
+    "avoidRecent": 0
+}))
+PY
+)")"
+set -e
+test "$EMPTY_STATUS" -eq 404
+echo "Empty/no-eligible status: $EMPTY_STATUS"
+
+
 echo "== History avoidance =="
 FIRST="$(randomize "$USER_TOKEN" RandomMovie "$ALLOWED_MOVIES_LIB" '[]' All 1 EqualEpisode)"
 SECOND="$(randomize "$USER_TOKEN" RandomMovie "$ALLOWED_MOVIES_LIB" '[]' All 1 EqualEpisode)"
@@ -429,6 +474,29 @@ if [ "$BLOCKED_NO_LIBRARY_STATUS" -eq 200 ]; then
   cat "$TMP/blocked-no-library.out"
   exit 1
 fi
+
+echo "== Inaccessible library scope cannot be selected =="
+set +e
+INACCESSIBLE_LIBRARY_STATUS="$(curl -sS -o "$TMP/inaccessible-library.out" -w '%{http_code}' -X POST \
+  -H "X-Emby-Token: $USER_TOKEN" \
+  -H 'Content-Type: application/json' \
+  "$BASE_URL/Randomizer/Randomize" \
+  --data "$(python3 - "$BLOCKED_MOVIES_LIB" "$ALLOWED_MOVIE_ID" <<'PY'
+import json, sys
+print(json.dumps({
+    "mode": "RandomMovie",
+    "libraryId": sys.argv[1],
+    "itemIds": [sys.argv[2]],
+    "strategy": "EqualEpisode",
+    "watched": "All",
+    "avoidRecent": 0
+}))
+PY
+)")"
+set -e
+test "$INACCESSIBLE_LIBRARY_STATUS" -eq 404
+echo "Inaccessible library scope status: $INACCESSIBLE_LIBRARY_STATUS"
+
 
 echo "== Normal Jellyfin details route =="
 user_get "/Users/$TEST_USER_ID/Items/$ALLOWED_MOVIE_ID" >/dev/null
