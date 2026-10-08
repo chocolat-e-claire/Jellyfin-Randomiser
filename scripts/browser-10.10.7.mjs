@@ -66,29 +66,28 @@ if (!meResponse.ok) {
 const me = await meResponse.json();
 const browserInstance = await chromium.launch({ headless: true });
 const context = await browserInstance.newContext({
-  baseURL: baseUrl,
-  extraHTTPHeaders: {
-    'X-Emby-Token': token
-  }
+  baseURL: baseUrl
 });
-await context.addInitScript(({ baseUrl, serverId, token, userId }) => {
-  const credentials = {
-    Servers: [{
-      Name: 'Jellyfin Randomizer CI',
-      ManualAddress: baseUrl,
-      LocalAddress: baseUrl,
-      Id: serverId,
-      DateLastAccessed: Date.now(),
-      LastConnectionMode: 1,
-      UserId: userId,
-      AccessToken: token
-    }]
-  };
-  localStorage.setItem('jellyfin_credentials', JSON.stringify(credentials));
-  localStorage.setItem('enableAutoLogin', 'true');
-}, { baseUrl, serverId, token, userId: me.Id });
 
 const page = await context.newPage();
+
+async function loginInJellyfinWeb() {
+  await page.goto('/web/index.html#!/login.html', { waitUntil: 'domcontentloaded' });
+  await waitFor(page.locator('#loginPage'), 'Jellyfin Web login page loads');
+
+  const manualButton = page.locator('.btnManual');
+  if (await manualButton.isVisible()) {
+    await manualButton.click();
+  }
+
+  await waitFor(page.locator('#txtManualName'), 'Jellyfin Web manual username field');
+  await page.locator('#txtManualName').fill(username);
+  await page.locator('#txtManualPassword').fill(password);
+  await page.locator('.manualLoginForm button[type="submit"]').click();
+
+  await waitFor(page.locator('#homePage'), 'authenticated Jellyfin Web home page', 60000);
+  console.log('PASS: authenticated Jellyfin Web session established through the real login form');
+}
 const pluginErrors = [];
 
 page.on('console', message => {
@@ -104,6 +103,8 @@ page.on('pageerror', error => {
 });
 
 try {
+  await loginInJellyfinWeb();
+
   console.log('== Standalone Randomizer page ==');
   await page.goto('/Randomizer/Page', { waitUntil: 'domcontentloaded' });
   await waitFor(page.getByRole('heading', { name: /Jellyfin Randomizer/i }), 'standalone page loads');
