@@ -7,7 +7,6 @@
     let started = false;
     const C = window.JellyfinRandomizerConfig || {};
     let type = null;
-    let pendingNativePlayItemId = null;
 
     function esc(value) {
         return String(value ?? '').replace(/[&<>"']/g, c => ({
@@ -242,60 +241,13 @@
         }
     }
 
-    function navigateToDetails(itemId, afterNavigation) {
-        const serverId = API?.serverId?.();
-        const route = 'details?id=' + encodeURIComponent(itemId) +
+    function navigateToDetails(itemId) {
+        const serverId = API?.serverId?.() || API?.serverInfo?.().Id;
+        const detailsUrl = '/web/index.html#!/details?id=' +
+            encodeURIComponent(itemId) +
             (serverId ? '&serverId=' + encodeURIComponent(serverId) : '');
 
-        let attempts = 0;
-        const timer = window.setInterval(() => {
-            const navigate = window.Dashboard?.navigate;
-            if (typeof navigate === 'function') {
-                window.clearInterval(timer);
-                Promise.resolve(navigate.call(window.Dashboard, route))
-                    .then(() => {
-                        afterNavigation?.();
-                    })
-                    .catch(error => {
-                        console.error('Jellyfin Randomizer could not navigate to item details.', error);
-                    });
-                return;
-            }
-
-            attempts += 1;
-            if (attempts >= 300) {
-                window.clearInterval(timer);
-                console.error('Jellyfin Randomizer requires the Jellyfin Web Dashboard navigation API.');
-            }
-        }, 100);
-    }
-
-    function nativePlayFromDetails(itemId) {
-        let attempts = 0;
-        const timer = window.setInterval(() => {
-            const page = document.querySelector('#itemDetailPage:not(.hide)');
-            const button = page?.querySelector(
-                '.btnPlay:not(.hide), .btnReplay:not(.hide)'
-            );
-
-            const hashQuery = location.hash.split('?')[1] || '';
-            const currentId = new URLSearchParams(hashQuery).get('id');
-            if (currentId !== itemId || !page) {
-                return;
-            }
-
-            if (button && !button.disabled) {
-                window.clearInterval(timer);
-                button.click();
-                return;
-            }
-
-            attempts += 1;
-            if (attempts >= 300) {
-                window.clearInterval(timer);
-                console.error('Jellyfin Randomizer could not find the native Jellyfin Play control.');
-            }
-        }, 100);
+        window.location.href = detailsUrl;
     }
 
     function showResult(dialog, result) {
@@ -324,7 +276,6 @@
                 navigateToDetails(result.itemId);
             });
             dialog.querySelector('#jfr-play').addEventListener('click', () => {
-                pendingNativePlayItemId = result.itemId;
                 dialog.remove();
                 navigateToDetails(result.itemId);
             });
@@ -339,20 +290,7 @@
     }
 
     function refresh() {
-        window.requestAnimationFrame(() => {
-            addButton();
-
-            if (pendingNativePlayItemId) {
-                const page = document.querySelector('#itemDetailPage:not(.hide)');
-                const hashQuery = location.hash.split('?')[1] || '';
-                const currentId = new URLSearchParams(hashQuery).get('id');
-                if (page && currentId === pendingNativePlayItemId) {
-                    const itemId = pendingNativePlayItemId;
-                    pendingNativePlayItemId = null;
-                    nativePlayFromDetails(itemId);
-                }
-            }
-        });
+        window.requestAnimationFrame(addButton);
     }
 
     function start() {
