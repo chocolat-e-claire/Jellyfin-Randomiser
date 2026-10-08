@@ -21,15 +21,18 @@ repository link: https://raw.githubusercontent.com/chocolat-e-claire/Jellyfin-Ra
 
 ## Non-invasive Web integration
 
-The plugin does **not** patch Jellyfin Web files, index.html, server binaries, database schema, or Jellyfin source.
+The plugin does **not** patch Jellyfin Web files, server binaries, database schema, or Jellyfin source.
 
-The Randomizer UI is exposed as an authenticated standalone page at:
+The plugin has two UI surfaces:
 
-`/Randomizer/Page`
+- An authenticated standalone page at `/Randomizer/Page`.
+- A Jellyfin Web enhancement registered through the separate **File Transformation** plugin.
 
-That page uses the plugin's server-side APIs and the current authenticated Jellyfin user. It does not intercept or rewrite `/web` responses.
+The Web integration registers a transformation for `index.html`; the transformation only appends the Randomizer loader tags to the response in memory. It never edits the installed Jellyfin Web files.
 
-The repository still contains the earlier embedded `randomizer.js` and `randomizer.css` resources for future Web integration work, but the current safe page does not rely on server-side Web response interception.
+The Web enhancement uses Jellyfin Web's `window.ApiClient` for plugin API calls and is guarded against duplicate injection during SPA navigation.
+
+File Transformation is an optional integration dependency. When it is unavailable, Randomizer logs a warning and Jellyfin continues starting normally.
 
 ## Security
 
@@ -47,9 +50,15 @@ The CI workflow performs the same restore/build/test sequence.
 
 Only **Jellyfin 10.10.7** is advertised. Later releases require a separate ABI compatibility review.
 
-## Current development status
+## Validation
 
-The stable `main` branch is the proven server/configuration release. The standalone Randomizer page is being developed on a separate branch and must pass CI and a controlled Jellyfin 10.10.7 test before it is merged or published.
+The feature branch is validated in disposable GitHub Actions environments using the real Jellyfin Server 10.10.7 container.
+
+The integration smoke test installs File Transformation 2.5.9.0 and Randomizer into a fresh Jellyfin configuration, verifies Web transformation registration and injected assets, creates synthetic movie/TV fixtures, configures a restricted Jellyfin user, and exercises the Randomizer API for library visibility, search limits, movies, shows, single-show episodes, multi-show episode strategies, watched/unwatched filters, history avoidance, permission enforcement, and normal item details access.
+
+A second CI job starts Jellyfin 10.10.7 with Randomizer but **without** File Transformation and verifies that the optional integration failure is non-fatal.
+
+The stable `main` branch remains the proven server/configuration release. The feature branch must pass these isolated tests before it is merged or published.
 
 ## License
 
