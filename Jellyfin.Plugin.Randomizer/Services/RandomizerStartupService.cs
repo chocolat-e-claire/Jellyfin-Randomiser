@@ -3,7 +3,6 @@ using System.Runtime.Loader;
 using Jellyfin.Plugin.Randomizer.Web;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 
 namespace Jellyfin.Plugin.Randomizer.Services;
 
@@ -54,16 +53,19 @@ public sealed class RandomizerStartupService : IScheduledTask
                 return;
             }
 
-            var payload = new JObject
-            {
-                ["id"] = TransformationId,
-                ["fileNamePattern"] = "index.html",
-                ["callbackAssembly"] = typeof(RandomizerWebTransformation).Assembly.FullName,
-                ["callbackClass"] = typeof(RandomizerWebTransformation).FullName,
-                ["callbackMethod"] = nameof(RandomizerWebTransformation.TransformIndexHtml)
-            };
+            var jobjectType = fileTransformationAssembly.GetType("Newtonsoft.Json.Linq.JObject");
+            var parseMethod = jobjectType?.GetMethod("Parse", new[] { typeof(string) });
 
-            registerMethod.Invoke(null, new object?[] { payload });
+            if (parseMethod is null)
+            {
+                logger.LogWarning("Randomizer found File Transformation but its JObject.Parse API was unavailable.");
+                return;
+            }
+
+            var payloadJson = $@"{{"id": "{TransformationId}", "fileNamePattern": "index.html", "callbackAssembly": "{typeof(RandomizerWebTransformation).Assembly.FullName}", "callbackClass": "{typeof(RandomizerWebTransformation).FullName}", "callbackMethod": "{nameof(RandomizerWebTransformation.TransformIndexHtml)}"}}";
+            var payload = parseMethod.Invoke(null, new object?[] { payloadJson });
+
+            registerMethod.Invoke(null, new[] { payload });
             logger.LogInformation("Registered Jellyfin Randomizer Web transformation for index.html.");
         }
         catch (Exception ex)
