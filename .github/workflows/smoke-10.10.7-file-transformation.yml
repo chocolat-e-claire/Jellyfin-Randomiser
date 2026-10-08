@@ -1,0 +1,94 @@
+name: Jellyfin 10.10.7 File Transformation smoke test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore plugin
+        run: dotnet restore Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj
+
+      - name: Build plugin
+        run: dotnet publish Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj --configuration Release --no-restore --output package
+
+      - name: Install plugin and File Transformation into isolated Jellyfin config
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(python3 -c 'import json; print(json.load(open("Jellyfin.Plugin.Randomizer/meta.json"))["version"])')
+          rm -rf smoke-config
+          mkdir -p "smoke-config/plugins/Jellyfin Randomizer_${VERSION}"
+          cp -a package/. "smoke-config/plugins/Jellyfin Randomizer_${VERSION}/"
+
+          curl -fsSL -o file-transformation.zip             https://github.com/IAmParadox27/jellyfin-plugin-file-transformation/releases/download/2.5.9.0/Release-10.10.7.zip
+          mkdir -p "smoke-config/plugins/File Transformation_2.5.9.0"
+          unzip -q file-transformation.zip -d "smoke-config/plugins/File Transformation_2.5.9.0"
+
+          chmod -R a+rwx smoke-config
+
+      - name: Start Jellyfin 10.10.7
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d             --name jellyfin-randomizer-ft-smoke             -p 8096:8096             -v "$PWD/smoke-config:/config"             jellyfin/jellyfin:10.10.7
+
+      - name: Wait for healthy server and transformed Web index
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          healthy=false
+          injected=false
+
+          for i in {1..90}; do
+            if curl -fsS http://127.0.0.1:8096/health >/dev/null 2>&1; then
+              healthy=true
+            fi
+
+            if curl -fsS http://127.0.0.1:8096/web/index.html 2>/dev/null |                 grep -Fq 'data-jellyfin-randomizer-loader'; then
+              injected=true
+            fi
+
+            if [ "$healthy" = true ] && [ "$injected" = true ]; then
+              break
+            fi
+
+            if ! docker ps --filter name=jellyfin-randomizer-ft-smoke --filter status=running -q | grep -q .; then
+              docker logs jellyfin-randomizer-ft-smoke || true
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          [ "$healthy" = true ]
+          [ "$injected" = true ]
+
+      - name: Verify transformed assets, plugin load, and clean startup
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS http://127.0.0.1:8096/web/index.html | grep -Fq 'data-jellyfin-randomizer-loader'
+          curl -fsS http://127.0.0.1:8096/Randomizer/Script.js | grep -Fq 'JellyfinRandomizer'
+          curl -fsS http://127.0.0.1:8096/Randomizer/Styles.css | grep -Fq 'jfr-backdrop'
+
+          docker logs jellyfin-randomizer-ft-smoke 2>&1 | tee smoke.log
+          grep -F 'Jellyfin Randomizer' smoke.log
+          grep -F 'Registered Jellyfin Randomizer Web transformation for index.html.' smoke.log
+          ! grep -Eiq 'Unhandled exception|fail:.*Jellyfin.Plugin.Randomizer|Application startup exception|host terminated unexpectedly' smoke.log
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f jellyfin-randomizer-ft-smoke || true
