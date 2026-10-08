@@ -64,33 +64,46 @@ if (!meResponse.ok) {
   throw new Error(`Unable to resolve authenticated Jellyfin user: HTTP ${meResponse.status}`);
 }
 const me = await meResponse.json();
+if (!me.Id) {
+  throw new Error('Authenticated Jellyfin user response did not contain an Id.');
+}
+
 const browserInstance = await chromium.launch({ headless: true });
 const context = await browserInstance.newContext({
   baseURL: baseUrl
 });
 
+await context.addInitScript(({ serverId, baseUrl, token, me }) => {
+  const server = {
+    DateLastAccessed: Date.now(),
+    LastConnectionMode: 2,
+    ManualAddress: baseUrl,
+    manualAddressOnly: true,
+    Name: 'Jellyfin Randomizer Browser CI',
+    Id: serverId,
+    LocalAddress: baseUrl,
+    AccessToken: token,
+    UserId: me.Id
+  };
+
+  localStorage.setItem('jellyfin_credentials', JSON.stringify({ Servers: [server] }));
+  localStorage.setItem(
+    `user-${me.Id}-${serverId}`,
+    JSON.stringify({
+      ...me,
+      ServerId: serverId,
+      EnableAutoLogin: true
+    })
+  );
+  localStorage.setItem('enableAutoLogin', 'true');
+}, { serverId, baseUrl, token, me });
+
 const page = await context.newPage();
 
-async function loginInJellyfinWeb() {
-  await page.goto('/web/index.html#!/addserver', { waitUntil: 'domcontentloaded' });
-  await waitFor(page.locator('#txtServerHost'), 'Jellyfin Web add-server host field');
-  await page.locator('#txtServerHost').fill(baseUrl);
-  await page.locator('.addServerForm button[type="submit"]').click();
-
-  await waitFor(page.locator('#loginPage'), 'Jellyfin Web login page loads after server connection', 60000);
-
-  const manualButton = page.locator('.btnManual');
-  if (await manualButton.isVisible()) {
-    await manualButton.click();
-  }
-
-  await waitFor(page.locator('#txtManualName'), 'Jellyfin Web manual username field');
-  await page.locator('#txtManualName').fill(username);
-  await page.locator('#txtManualPassword').fill(password);
-  await page.locator('.manualLoginForm button[type="submit"]').click();
-
-  await waitFor(page.locator('#homePage'), 'authenticated Jellyfin Web home page', 60000);
-  console.log('PASS: authenticated Jellyfin Web session established through the real add-server and login flow');
+async function establishJellyfinWebSession() {
+  await page.goto('/web/index.html#!/home.html', { waitUntil: 'domcontentloaded' });
+  await waitFor(page.locator('#homePage'), 'authenticated Jellyfin Web home page');
+  console.log('PASS: authenticated Jellyfin Web session seeded from the real Jellyfin API token');
 }
 const pluginErrors = [];
 
@@ -107,7 +120,7 @@ page.on('pageerror', error => {
 });
 
 try {
-  await loginInJellyfinWeb();
+  await establishJellyfinWebSession();
 
   console.log('== Standalone Randomizer page ==');
   await page.goto('/Randomizer/Page', { waitUntil: 'domcontentloaded' });
@@ -209,9 +222,8 @@ try {
   await waitForSingle(page, '[data-randomizer-button]', 'one Movies button after repeated SPA navigation');
   console.log('PASS: Movies → TV → Movies → TV navigation never duplicates injection');
 
-
   if (pluginErrors.length > 0) {
-    throw new Error(`Jellyfin Randomizer browser errors:\\n${pluginErrors.join('\\n')}`);
+    throw new Error(`Jellyfin Randomizer browser errors:\n${pluginErrors.join('\n')}`);
   }
 
   console.log('== Browser acceptance passed ==');
