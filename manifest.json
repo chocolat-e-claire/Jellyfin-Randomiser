@@ -8,12 +8,12 @@
     "category": "General",
     "versions": [
       {
-        "version": "0.1.0.0",
+        "version": "0.1.0.1",
         "changelog": "Initial Jellyfin 10.10.7 implementation.",
         "targetAbi": "10.10.7.0",
-        "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.0/Jellyfin.Plugin.Randomizer_0.1.0.0.zip",
-        "checksum": "fa1a498bdc532345be881d946e4b0311a405a3f936d1b00c21402a4a619fc264",
-        "timestamp": "2026-10-08T10:36:45Z"
+        "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.1/Jellyfin.Plugin.Randomizer_0.1.0.1.zip",
+        "checksum": "f9f1cfa8894ae0e7c378affa1f3aa4f3",
+        "timestamp": "2026-10-08T10:40:25Z"
       }
     ]
   }
