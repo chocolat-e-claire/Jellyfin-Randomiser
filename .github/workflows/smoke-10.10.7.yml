@@ -2,8 +2,8 @@ name: Jellyfin 10.10.7 plugin smoke test
 
 on:
   workflow_dispatch:
-  release:
-    types: [published]
+  push:
+    branches: [main]
 
 jobs:
   smoke:
