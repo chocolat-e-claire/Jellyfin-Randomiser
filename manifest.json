@@ -6,15 +6,13 @@
     "overview": "Randomize accessible Jellyfin library content without modifying Jellyfin Web files.",
     "owner": "chocolat-e-claire",
     "category": "General",
-    "versions": [
-      {
-        "version": "0.1.0.1",
-        "changelog": "Initial Jellyfin 10.10.7 implementation.",
-        "targetAbi": "10.10.7.0",
-        "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.1/Jellyfin.Plugin.Randomizer_0.1.0.1.zip",
-        "checksum": "f9f1cfa8894ae0e7c378affa1f3aa4f3",
-        "timestamp": "2026-10-08T10:40:25Z"
-      }
-    ]
+    "versions": [{
+      "version": "0.1.0.2",
+      "changelog": "Packaging and repository checksum fix.",
+      "targetAbi": "10.10.7.0",
+      "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.2/Jellyfin.Plugin.Randomizer_0.1.0.2.zip",
+      "checksum": "PENDING",
+      "timestamp": "2026-10-08T00:00:00Z"
+    }]
   }
 ]
