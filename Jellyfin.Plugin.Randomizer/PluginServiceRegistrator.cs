@@ -1,1 +1,16 @@
-using Jellyfin.Plugin.Randomizer.Services; using MediaBrowser.Controller; using MediaBrowser.Controller.Plugins; using Microsoft.AspNetCore.Hosting; using Microsoft.Extensions.DependencyInjection; namespace Jellyfin.Plugin.Randomizer; public sealed class PluginServiceRegistrator:IPluginServiceRegistrator { public void RegisterServices(IServiceCollection s,IServerApplicationHost a){s.AddSingleton<IRandomSource,SystemRandomSource>();s.AddSingleton<RandomHistoryService>();s.AddSingleton<RandomizerService>();s.AddTransient<IStartupFilter,WebInjectionStartupFilter>();} }
+using Jellyfin.Plugin.Randomizer.Services;
+using MediaBrowser.Controller;
+using MediaBrowser.Controller.Plugins;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Jellyfin.Plugin.Randomizer;
+
+public sealed class PluginServiceRegistrator : IPluginServiceRegistrator
+{
+    public void RegisterServices(IServiceCollection services, IServerApplicationHost applicationHost)
+    {
+        services.AddSingleton<IRandomSource, SystemRandomSource>();
+        services.AddSingleton<RandomHistoryService>();
+        services.AddSingleton<RandomizerService>();
+    }
+}
