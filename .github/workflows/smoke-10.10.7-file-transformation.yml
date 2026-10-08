@@ -73,6 +73,8 @@ jobs:
             sleep 2
           done
 
+          docker logs jellyfin-randomizer-ft-smoke 2>&1 | tee timeout-smoke.log || true
+          echo "healthy=$healthy injected=$injected"
           [ "$healthy" = true ]
           [ "$injected" = true ]
 
