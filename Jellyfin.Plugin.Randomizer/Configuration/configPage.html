@@ -1,1 +1,54 @@
-<div id="jfr-config"><h2>Jellyfin Randomizer</h2><label><input id="Enabled" type="checkbox"> Enable Randomizer</label><br><label>Default episode strategy <select id="DefaultEpisodeStrategy"><option>EqualEpisode</option><option>EqualShow</option></select></label><br><label>Default watched filter <select id="DefaultWatchedFilter"><option>All</option><option>Unwatched</option><option>Watched</option></select></label><br><label><input id="AnimationEnabled" type="checkbox"> Roulette presentation</label><br><label><input id="AnimationAudio" type="checkbox"> Animation audio</label><br><label><input id="Confetti" type="checkbox"> Confetti</label><br><label>Animation duration <input id="AnimationDurationMs" type="number" min="500" max="10000"></label><br><label>History size <input id="HistorySize" type="number" min="0" max="20"></label><br><button id="save">Save</button></div><script>(async()=>{const id=ApiClient.getPluginUniqueId('Jellyfin Randomizer'),c=await ApiClient.getPluginConfiguration(id);['Enabled','DefaultEpisodeStrategy','DefaultWatchedFilter','AnimationEnabled','AnimationAudio','Confetti','AnimationDurationMs','HistorySize'].forEach(k=>{const e=document.getElementById(k);if(e.type==='checkbox')e.checked=c[k];else e.value=c[k];});document.getElementById('save').onclick=async()=>{const n=await ApiClient.getPluginConfiguration(id);['Enabled','DefaultEpisodeStrategy','DefaultWatchedFilter','AnimationEnabled','AnimationAudio','Confetti','AnimationDurationMs','HistorySize'].forEach(k=>{const e=document.getElementById(k);n[k]=e.type==='checkbox'?e.checked:e.type==='number'?Number(e.value):e.value;});await ApiClient.updatePluginConfiguration(id,n);Dashboard.alert('Saved');};})();</script>
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Jellyfin Randomizer</title></head>
+<body>
+<div data-role="page" id="randomizerConfigurationPage" class="page type-interior pluginConfigurationPage">
+<div data-role="content"><div class="content-primary">
+<form id="randomizerConfigurationForm">
+<h2 class="sectionTitle">Jellyfin Randomizer</h2>
+<div class="inputContainer"><label class="checkboxContainer"><input id="Enabled" type="checkbox" is="emby-checkbox"><span>Enable Randomizer</span></label></div>
+<div class="inputContainer"><label class="inputLabel" for="DefaultEpisodeStrategy">Default episode strategy</label><select id="DefaultEpisodeStrategy" is="emby-select"><option value="EqualEpisode">Equal episode</option><option value="EqualShow">Equal show</option></select></div>
+<div class="inputContainer"><label class="inputLabel" for="DefaultWatchedFilter">Default watched filter</label><select id="DefaultWatchedFilter" is="emby-select"><option value="All">All</option><option value="Unwatched">Unwatched</option><option value="Watched">Watched</option></select></div>
+<div class="inputContainer"><label class="checkboxContainer"><input id="AnimationEnabled" type="checkbox" is="emby-checkbox"><span>Roulette presentation</span></label></div>
+<div class="inputContainer"><label class="checkboxContainer"><input id="AnimationAudio" type="checkbox" is="emby-checkbox"><span>Animation audio</span></label></div>
+<div class="inputContainer"><label class="checkboxContainer"><input id="Confetti" type="checkbox" is="emby-checkbox"><span>Confetti</span></label></div>
+<div class="inputContainer"><label class="inputLabel" for="AnimationDurationMs">Animation duration (ms)</label><input id="AnimationDurationMs" type="number" min="500" max="10000" is="emby-input"></div>
+<div class="inputContainer"><label class="inputLabel" for="HistorySize">History size</label><input id="HistorySize" type="number" min="0" max="20" is="emby-input"></div>
+<div class="formDialogFooter"><button is="emby-button" type="submit" class="raised button-submit"><span>Save</span></button></div>
+</form>
+</div></div></div>
+<script>
+(function () {
+    const pluginId = ApiClient.getPluginUniqueId('Jellyfin Randomizer');
+    const form = document.getElementById('randomizerConfigurationForm');
+    async function loadConfiguration() {
+        const c = await ApiClient.getPluginConfiguration(pluginId);
+        document.getElementById('Enabled').checked = !!c.Enabled;
+        document.getElementById('DefaultEpisodeStrategy').value = c.DefaultEpisodeStrategy || 'EqualEpisode';
+        document.getElementById('DefaultWatchedFilter').value = c.DefaultWatchedFilter || 'All';
+        document.getElementById('AnimationEnabled').checked = !!c.AnimationEnabled;
+        document.getElementById('AnimationAudio').checked = !!c.AnimationAudio;
+        document.getElementById('Confetti').checked = !!c.Confetti;
+        document.getElementById('AnimationDurationMs').value = c.AnimationDurationMs ?? 2500;
+        document.getElementById('HistorySize').value = c.HistorySize ?? 10;
+    }
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const c = await ApiClient.getPluginConfiguration(pluginId);
+        c.Enabled = document.getElementById('Enabled').checked;
+        c.DefaultEpisodeStrategy = document.getElementById('DefaultEpisodeStrategy').value;
+        c.DefaultWatchedFilter = document.getElementById('DefaultWatchedFilter').value;
+        c.AnimationEnabled = document.getElementById('AnimationEnabled').checked;
+        c.AnimationAudio = document.getElementById('AnimationAudio').checked;
+        c.Confetti = document.getElementById('Confetti').checked;
+        c.AnimationDurationMs = Number(document.getElementById('AnimationDurationMs').value);
+        c.HistorySize = Number(document.getElementById('HistorySize').value);
+        await ApiClient.updatePluginConfiguration(pluginId, c);
+        Dashboard.alert('Saved');
+    });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadConfiguration, {once:true});
+    else loadConfiguration();
+})();
+</script>
+</body>
+</html>
