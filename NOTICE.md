@@ -1,0 +1,1 @@
+Jellyfin Randomizer is inspired by the architecture and UI ideas of Jellyfin-Roulette (https://github.com/ztffn/Jellyfin-Roulette), which is MIT licensed. This project does not modify Jellyfin installation files; its Web resources are injected into the HTTP response at request time.
