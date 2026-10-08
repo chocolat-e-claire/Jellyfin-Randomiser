@@ -1,6 +1,7 @@
 # Jellyfin Randomizer
 
 Standalone Jellyfin plugin targeting **Jellyfin Server 10.10.7 / target ABI 10.10.7.0 / .NET 8**.
+repository link: https://raw.githubusercontent.com/chocolat-e-claire/Jellyfin-Randomiser/main/manifest.json
 
 ## Features
 
