@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="\${1:-smoke-media}"
+ROOT="${1:-smoke-media}"
 
 if ! command -v ffmpeg >/dev/null 2>&1; then
   sudo apt-get update
@@ -13,7 +13,7 @@ make_video() {
   local color="$2"
   mkdir -p "$(dirname "$path")"
   ffmpeg -hide_banner -loglevel error -y \
-    -f lavfi -i "color=c=\${color}:s=320x180:d=1" \
+    -f lavfi -i "color=c=${color}:s=320x180:d=1" \
     -f lavfi -i "anullsrc=r=48000:cl=mono" \
     -t 1 \
     -c:v libx264 -pix_fmt yuv420p \
