@@ -7,6 +7,7 @@
     let started = false;
     const C = window.JellyfinRandomizerConfig || {};
     let type = null;
+    let pendingNativePlayItemId = null;
 
     function esc(value) {
         return String(value ?? '').replace(/[&<>"']/g, c => ({
@@ -323,8 +324,9 @@
                 navigateToDetails(result.itemId);
             });
             dialog.querySelector('#jfr-play').addEventListener('click', () => {
+                pendingNativePlayItemId = result.itemId;
                 dialog.remove();
-                navigateToDetails(result.itemId, () => nativePlayFromDetails(result.itemId));
+                navigateToDetails(result.itemId);
             });
         };
 
@@ -337,7 +339,20 @@
     }
 
     function refresh() {
-        window.requestAnimationFrame(addButton);
+        window.requestAnimationFrame(() => {
+            addButton();
+
+            if (pendingNativePlayItemId) {
+                const page = document.querySelector('#itemDetailPage:not(.hide)');
+                const hashQuery = location.hash.split('?')[1] || '';
+                const currentId = new URLSearchParams(hashQuery).get('id');
+                if (page && currentId === pendingNativePlayItemId) {
+                    const itemId = pendingNativePlayItemId;
+                    pendingNativePlayItemId = null;
+                    nativePlayFromDetails(itemId);
+                }
+            }
+        });
     }
 
     function start() {
