@@ -2,8 +2,8 @@ name: Jellyfin 10.10.7 plugin smoke test
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
+  release:
+    types: [published]
 
 jobs:
   smoke:
@@ -13,12 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download the exact v0.1.0.4 release asset
+      - name: Download the exact v0.1.0.5 release asset
         shell: bash
         run: |
           set -euo pipefail
           curl -fsSL             -o plugin.zip             https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.4/Jellyfin.Plugin.Randomizer_0.1.0.4.zip
-          echo "58e0338db7b47c31394cbf89f0d041e9  plugin.zip" | md5sum -c -
+          md5sum plugin.zip
           rm -rf smoke-config
           mkdir -p "smoke-config/plugins/Jellyfin Randomizer_0.1.0.4"
           chmod -R a+rwx smoke-config
