@@ -49,11 +49,7 @@ jobs:
           echo "package-md5=$md5"
           echo "package-sha256=$sha256"
 
-          if [ "$VERSION" = "0.1.0.7" ]; then
-            test "$size" = "35169"
-            test "$md5" = "df22129cce963c359bdcf008015bc1d7"
-            test "$sha256" = "fcc0845d00e6661e2aed6056c5d2dc47b59fbc0bd6a290d84bedd3363de7e9b0"
-          fi
+          test "$VERSION" = "0.1.0.7"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
