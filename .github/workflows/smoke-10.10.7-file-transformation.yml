@@ -23,6 +23,11 @@ jobs:
       - name: Build plugin
         run: dotnet publish Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj --configuration Release --no-restore --output package
 
+      - name: Install fixture media tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+
       - name: Create isolated media fixtures
         shell: bash
         run: |
