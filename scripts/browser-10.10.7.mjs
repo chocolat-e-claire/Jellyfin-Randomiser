@@ -112,7 +112,9 @@ async function establishJellyfinWebSession() {
     autoLogin: localStorage.getItem('enableAutoLogin')
   }));
 
-  if (!document.querySelector('#homePage')) {
+  const homePageVisible = await page.locator('#homePage').isVisible().catch(() => false);
+
+  if (!homePageVisible) {
     console.log(`BOOTSTRAP URL: ${bootstrapState.url}`);
     console.log(`BOOTSTRAP TITLE: ${bootstrapState.title}`);
     console.log(`BOOTSTRAP BODY: ${bootstrapState.bodyText.replace(/\\s+/g, ' ').trim()}`);
