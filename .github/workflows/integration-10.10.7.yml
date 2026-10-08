@@ -38,8 +38,8 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf smoke-config
-          mkdir -p "smoke-config/plugins/Jellyfin Randomizer_\${VERSION}"
-          cp -a package/. "smoke-config/plugins/Jellyfin Randomizer_\${VERSION}/"
+          mkdir -p "smoke-config/plugins/Jellyfin Randomizer_${VERSION}"
+          cp -a package/. "smoke-config/plugins/Jellyfin Randomizer_${VERSION}/"
 
           curl -fsSL -o file-transformation.zip \
             https://github.com/IAmParadox27/jellyfin-plugin-file-transformation/releases/download/2.5.9.0/Release-10.10.7.zip
@@ -129,7 +129,7 @@ jobs:
           set -euo pipefail
 
           docker rm -f jellyfin-randomizer-acceptance
-          rm -rf "smoke-config/plugins/Jellyfin Randomizer_\${VERSION}"
+          rm -rf "smoke-config/plugins/Jellyfin Randomizer_${VERSION}"
 
           docker run -d \
             --name jellyfin-randomizer-acceptance \
@@ -186,8 +186,8 @@ jobs:
           set -euo pipefail
           VERSION="$(python3 -c 'import json; print(json.load(open("Jellyfin.Plugin.Randomizer/meta.json"))["version"])')"
           rm -rf smoke-config
-          mkdir -p "smoke-config/plugins/Jellyfin Randomizer_\${VERSION}"
-          cp -a package/. "smoke-config/plugins/Jellyfin Randomizer_\${VERSION}/"
+          mkdir -p "smoke-config/plugins/Jellyfin Randomizer_${VERSION}"
+          cp -a package/. "smoke-config/plugins/Jellyfin Randomizer_${VERSION}/"
           chmod -R a+rwx smoke-config
 
       - name: Start isolated Jellyfin 10.10.7 without File Transformation
