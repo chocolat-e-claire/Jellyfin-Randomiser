@@ -1,14 +1,11 @@
-name: Jellyfin 10.10.7 File Transformation smoke test
+name: Jellyfin 10.10.7 integration acceptance
 
 on:
-  push:
-    branches:
-      - feature/safe-randomizer-page
   pull_request:
   workflow_dispatch:
 
 jobs:
-  smoke:
+  integration:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -26,55 +23,43 @@ jobs:
       - name: Build plugin
         run: dotnet publish Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj --configuration Release --no-restore --output package
 
-      - name: Install fixture media tooling
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg
-
-      - name: Create isolated media fixtures
+      - name: Read candidate version
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf smoke-media
-          mkdir -p             smoke-media/allowed-movies             smoke-media/blocked-movies             smoke-media/allowed-shows/"Test Show A"/"Season 01"             smoke-media/allowed-shows/"Test Show B"/"Season 01"
+          VERSION="$(python3 -c 'import json; print(json.load(open("Jellyfin.Plugin.Randomizer/meta.json"))["version"])')"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
-          make_video() {
-            local output="$1"
-            ffmpeg -hide_banner -loglevel error -y               -f lavfi -i color=c=black:s=320x240:r=1:d=1               -an -c:v libx264 -pix_fmt yuv420p "$output"
-          }
+      - name: Generate synthetic media fixtures
+        run: bash scripts/create-fixtures-10.10.7.sh smoke-media
 
-          make_video "smoke-media/allowed-movies/Allowed Movie 1.mp4"
-          make_video "smoke-media/allowed-movies/Allowed Movie 2.mp4"
-          make_video "smoke-media/blocked-movies/Blocked Movie 1.mp4"
-          make_video "smoke-media/allowed-shows/Test Show A/Season 01/Test Show A - S01E01.mp4"
-          make_video "smoke-media/allowed-shows/Test Show A/Season 01/Test Show A - S01E02.mp4"
-          make_video "smoke-media/allowed-shows/Test Show B/Season 01/Test Show B - S01E01.mp4"
-          make_video "smoke-media/allowed-shows/Test Show B/Season 01/Test Show B - S01E02.mp4"
-
-          find smoke-media -type f -print
-
-      - name: Install plugin and File Transformation into isolated Jellyfin config
+      - name: Install candidate and File Transformation
         shell: bash
         run: |
           set -euo pipefail
-          VERSION=$(python3 -c 'import json; print(json.load(open("Jellyfin.Plugin.Randomizer/meta.json"))["version"])')
           rm -rf smoke-config
           mkdir -p "smoke-config/plugins/Jellyfin Randomizer_${VERSION}"
           cp -a package/. "smoke-config/plugins/Jellyfin Randomizer_${VERSION}/"
 
-          curl -fsSL -o file-transformation.zip             https://github.com/IAmParadox27/jellyfin-plugin-file-transformation/releases/download/2.5.9.0/Release-10.10.7.zip
+          curl -fsSL -o file-transformation.zip \
+            https://github.com/IAmParadox27/jellyfin-plugin-file-transformation/releases/download/2.5.9.0/Release-10.10.7.zip
           mkdir -p "smoke-config/plugins/File Transformation_2.5.9.0"
           unzip -q file-transformation.zip -d "smoke-config/plugins/File Transformation_2.5.9.0"
 
-          chmod -R a+rwx smoke-config smoke-media
+          chmod -R a+rwx smoke-config
 
-      - name: Start Jellyfin 10.10.7
+      - name: Start isolated Jellyfin 10.10.7
         shell: bash
         run: |
           set -euo pipefail
-          docker run -d             --name jellyfin-randomizer-ft-smoke             -p 8096:8096             -v "$PWD/smoke-config:/config"             -v "$PWD/smoke-media:/media:ro"             jellyfin/jellyfin:10.10.7
+          docker run -d \
+            --name jellyfin-randomizer-acceptance \
+            -p 8096:8096 \
+            -v "$PWD/smoke-config:/config" \
+            -v "$PWD/smoke-media:/media:ro" \
+            jellyfin/jellyfin:10.10.7
 
-      - name: Wait for healthy server and transformed Web index
+      - name: Verify File Transformation injection
         shell: bash
         run: |
           set -euo pipefail
@@ -87,8 +72,8 @@ jobs:
               healthy=true
             fi
 
-            if curl -fsS http://127.0.0.1:8096/web/index.html 2>/dev/null |
-              grep -Fq 'data-jellyfin-randomizer-loader'; then
+            if curl -fsS http://127.0.0.1:8096/web/index.html 2>/dev/null \
+              | grep -Fq 'data-jellyfin-randomizer-loader'; then
               injected=true
             fi
 
@@ -96,43 +81,86 @@ jobs:
               break
             fi
 
-            if ! docker ps --filter name=jellyfin-randomizer-ft-smoke --filter status=running -q | grep -q .; then
-              docker logs jellyfin-randomizer-ft-smoke || true
+            if ! docker ps --filter name=jellyfin-randomizer-acceptance --filter status=running -q | grep -q .; then
+              docker logs jellyfin-randomizer-acceptance || true
               exit 1
             fi
 
             sleep 2
           done
 
-          docker logs jellyfin-randomizer-ft-smoke 2>&1 | tee timeout-smoke.log || true
           echo "healthy=$healthy injected=$injected"
           [ "$healthy" = true ]
           [ "$injected" = true ]
 
-      - name: Run Jellyfin API acceptance suite
+          docker logs jellyfin-randomizer-acceptance 2>&1 | tee integration-startup.log
+          grep -F 'Loaded plugin: File Transformation 2.5.9.0' integration-startup.log
+          grep -F 'Jellyfin Randomizer' integration-startup.log
+          grep -F 'Randomizer startup service executing.' integration-startup.log
+          grep -F 'Registered Jellyfin Randomizer Web transformation for index.html.' integration-startup.log
+          ! grep -Eiq 'Unhandled exception|fail:.*Jellyfin.Plugin.Randomizer|Application startup exception|host terminated unexpectedly' integration-startup.log
+
+      - name: Verify HTTP assets and run API acceptance suite
+        shell: bash
         env:
           JELLYFIN_URL: http://127.0.0.1:8096
-        run: bash scripts/acceptance-10.10.7.sh
+        run: |
+          set -euo pipefail
+          curl -fsS "$JELLYFIN_URL/Randomizer/Script.js" | grep -Fq 'JellyfinRandomizer'
+          curl -fsS "$JELLYFIN_URL/Randomizer/Styles.css" | grep -Fq 'jfr-backdrop'
+          bash scripts/acceptance-10.10.7.sh
 
-      - name: Verify transformed assets, plugin load, and clean startup
+      - name: Run real Jellyfin Web browser acceptance
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS http://127.0.0.1:8096/web/index.html | grep -Fq 'data-jellyfin-randomizer-loader'
-          curl -fsS http://127.0.0.1:8096/Randomizer/Script.js | grep -Fq 'JellyfinRandomizer'
-          curl -fsS http://127.0.0.1:8096/Randomizer/Styles.css | grep -Fq 'jfr-backdrop'
+          docker run --rm \
+            --network host \
+            -v "$PWD/scripts:/tests:ro" \
+            -e JELLYFIN_URL=http://127.0.0.1:8096 \
+            -e JELLYFIN_USER=ci-admin \
+            -e JELLYFIN_PASSWORD=ci-admin-password \
+            mcr.microsoft.com/playwright:v1.49.1-noble \
+            node /tests/browser-10.10.7.mjs
 
-          docker logs jellyfin-randomizer-ft-smoke 2>&1 | tee smoke.log
-          grep -F 'Loaded plugin: File Transformation' smoke.log
-          grep -F 'Jellyfin Randomizer' smoke.log
-          grep -F 'Randomizer startup service executing.' smoke.log
-          grep -F 'Registered Jellyfin Randomizer Web transformation for index.html.' smoke.log
-          grep -F 'Core startup complete' smoke.log
-          ! grep -Eiq 'Unhandled exception|fail:.*Jellyfin.Plugin.Randomizer|Application startup exception|host terminated unexpectedly' smoke.log
+      - name: Test clean uninstall and server restart
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker rm -f jellyfin-randomizer-acceptance
+          rm -rf "smoke-config/plugins/Jellyfin Randomizer_${VERSION}"
+
+          docker run -d \
+            --name jellyfin-randomizer-acceptance \
+            -p 8096:8096 \
+            -v "$PWD/smoke-config:/config" \
+            -v "$PWD/smoke-media:/media:ro" \
+            jellyfin/jellyfin:10.10.7
+
+          for i in {1..90}; do
+            if curl -fsS http://127.0.0.1:8096/health >/dev/null 2>&1; then
+              break
+            fi
+            if ! docker ps --filter name=jellyfin-randomizer-acceptance --filter status=running -q | grep -q .; then
+              docker logs jellyfin-randomizer-acceptance || true
+              exit 1
+            fi
+            sleep 2
+          done
+
+          curl -fsS http://127.0.0.1:8096/health >/dev/null
+          if curl -fsS http://127.0.0.1:8096/web/index.html | grep -Fq 'data-jellyfin-randomizer-loader'; then
+            echo "Randomizer Web loader remained after plugin removal."
+            exit 1
+          fi
+
+          docker logs jellyfin-randomizer-acceptance 2>&1 | tee uninstall.log
+          ! grep -Eiq 'Unhandled exception|fail:.*Jellyfin.Plugin.Randomizer|Application startup exception|host terminated unexpectedly' uninstall.log
 
       - name: Cleanup
         if: always()
-        run: docker rm -f jellyfin-randomizer-ft-smoke || true
+        run: docker rm -f jellyfin-randomizer-acceptance || true
 
   no-file-transformation:
     runs-on: ubuntu-latest
@@ -148,30 +176,37 @@ jobs:
 
       - name: Build plugin
         run: |
+          set -euo pipefail
           dotnet restore Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj
-          dotnet publish Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj             --configuration Release --no-restore --output package
+          dotnet publish Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj --configuration Release --no-restore --output package
 
-      - name: Install Randomizer without File Transformation
+      - name: Install candidate without File Transformation
         shell: bash
         run: |
           set -euo pipefail
-          VERSION=$(python3 -c 'import json; print(json.load(open("Jellyfin.Plugin.Randomizer/meta.json"))["version"])')
+          VERSION="$(python3 -c 'import json; print(json.load(open("Jellyfin.Plugin.Randomizer/meta.json"))["version"])')"
           rm -rf smoke-config
           mkdir -p "smoke-config/plugins/Jellyfin Randomizer_${VERSION}"
           cp -a package/. "smoke-config/plugins/Jellyfin Randomizer_${VERSION}/"
           chmod -R a+rwx smoke-config
 
-      - name: Start Jellyfin 10.10.7
+      - name: Start isolated Jellyfin 10.10.7 without File Transformation
+        shell: bash
         run: |
-          docker run -d             --name jellyfin-randomizer-no-ft             -p 8096:8096             -v "$PWD/smoke-config:/config"             jellyfin/jellyfin:10.10.7
+          set -euo pipefail
+          docker run -d \
+            --name jellyfin-randomizer-no-ft \
+            -p 8097:8096 \
+            -v "$PWD/smoke-config:/config" \
+            jellyfin/jellyfin:10.10.7
 
-      - name: Verify optional integration failure is non-fatal
+      - name: Verify optional dependency failure is non-fatal
         shell: bash
         run: |
           set -euo pipefail
 
           for i in {1..90}; do
-            if curl -fsS http://127.0.0.1:8096/health >/dev/null 2>&1; then
+            if curl -fsS http://127.0.0.1:8097/health >/dev/null 2>&1; then
               break
             fi
             if ! docker ps --filter name=jellyfin-randomizer-no-ft --filter status=running -q | grep -q .; then
@@ -181,10 +216,9 @@ jobs:
             sleep 2
           done
 
-          docker logs jellyfin-randomizer-no-ft 2>&1 | tee no-ft.log || true
-          grep -F 'Randomizer startup service executing.' no-ft.log
-          grep -F 'could not find the File Transformation assembly' no-ft.log
-          grep -F 'Core startup complete' no-ft.log
+          curl -fsS http://127.0.0.1:8097/health >/dev/null
+          docker logs jellyfin-randomizer-no-ft 2>&1 | tee no-ft.log
+          grep -F 'Randomizer could not find the File Transformation assembly.' no-ft.log
           ! grep -Eiq 'Unhandled exception|fail:.*Jellyfin.Plugin.Randomizer|Application startup exception|host terminated unexpectedly' no-ft.log
 
       - name: Cleanup
