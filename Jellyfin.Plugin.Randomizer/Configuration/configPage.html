@@ -1,54 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><title>Jellyfin Randomizer</title></head>
+<head>
+    <meta charset="utf-8">
+    <title>Jellyfin Randomizer</title>
+</head>
 <body>
-<div data-role="page" id="randomizerConfigurationPage" class="page type-interior pluginConfigurationPage">
-<div data-role="content"><div class="content-primary">
-<form id="randomizerConfigurationForm">
-<h2 class="sectionTitle">Jellyfin Randomizer</h2>
-<div class="inputContainer"><label class="checkboxContainer"><input id="Enabled" type="checkbox" is="emby-checkbox"><span>Enable Randomizer</span></label></div>
-<div class="inputContainer"><label class="inputLabel" for="DefaultEpisodeStrategy">Default episode strategy</label><select id="DefaultEpisodeStrategy" is="emby-select"><option value="EqualEpisode">Equal episode</option><option value="EqualShow">Equal show</option></select></div>
-<div class="inputContainer"><label class="inputLabel" for="DefaultWatchedFilter">Default watched filter</label><select id="DefaultWatchedFilter" is="emby-select"><option value="All">All</option><option value="Unwatched">Unwatched</option><option value="Watched">Watched</option></select></div>
-<div class="inputContainer"><label class="checkboxContainer"><input id="AnimationEnabled" type="checkbox" is="emby-checkbox"><span>Roulette presentation</span></label></div>
-<div class="inputContainer"><label class="checkboxContainer"><input id="AnimationAudio" type="checkbox" is="emby-checkbox"><span>Animation audio</span></label></div>
-<div class="inputContainer"><label class="checkboxContainer"><input id="Confetti" type="checkbox" is="emby-checkbox"><span>Confetti</span></label></div>
-<div class="inputContainer"><label class="inputLabel" for="AnimationDurationMs">Animation duration (ms)</label><input id="AnimationDurationMs" type="number" min="500" max="10000" is="emby-input"></div>
-<div class="inputContainer"><label class="inputLabel" for="HistorySize">History size</label><input id="HistorySize" type="number" min="0" max="20" is="emby-input"></div>
-<div class="formDialogFooter"><button is="emby-button" type="submit" class="raised button-submit"><span>Save</span></button></div>
-</form>
-</div></div></div>
-<script>
-(function () {
-    const pluginId = ApiClient.getPluginUniqueId('Jellyfin Randomizer');
-    const form = document.getElementById('randomizerConfigurationForm');
-    async function loadConfiguration() {
-        const c = await ApiClient.getPluginConfiguration(pluginId);
-        document.getElementById('Enabled').checked = !!c.Enabled;
-        document.getElementById('DefaultEpisodeStrategy').value = c.DefaultEpisodeStrategy || 'EqualEpisode';
-        document.getElementById('DefaultWatchedFilter').value = c.DefaultWatchedFilter || 'All';
-        document.getElementById('AnimationEnabled').checked = !!c.AnimationEnabled;
-        document.getElementById('AnimationAudio').checked = !!c.AnimationAudio;
-        document.getElementById('Confetti').checked = !!c.Confetti;
-        document.getElementById('AnimationDurationMs').value = c.AnimationDurationMs ?? 2500;
-        document.getElementById('HistorySize').value = c.HistorySize ?? 10;
-    }
-    form.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const c = await ApiClient.getPluginConfiguration(pluginId);
-        c.Enabled = document.getElementById('Enabled').checked;
-        c.DefaultEpisodeStrategy = document.getElementById('DefaultEpisodeStrategy').value;
-        c.DefaultWatchedFilter = document.getElementById('DefaultWatchedFilter').value;
-        c.AnimationEnabled = document.getElementById('AnimationEnabled').checked;
-        c.AnimationAudio = document.getElementById('AnimationAudio').checked;
-        c.Confetti = document.getElementById('Confetti').checked;
-        c.AnimationDurationMs = Number(document.getElementById('AnimationDurationMs').value);
-        c.HistorySize = Number(document.getElementById('HistorySize').value);
-        await ApiClient.updatePluginConfiguration(pluginId, c);
-        Dashboard.alert('Saved');
-    });
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadConfiguration, {once:true});
-    else loadConfiguration();
-})();
-</script>
+<div id="randomizerConfigurationPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="randomizerConfigurationForm">
+                <h2 class="sectionTitle">Jellyfin Randomizer</h2>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="Enabled" type="checkbox" is="emby-checkbox">
+                        <span>Enable Randomizer</span>
+                    </label>
+                </div>
+
+                <div class="selectContainer">
+                    <label class="selectLabel" for="DefaultEpisodeStrategy">Default episode strategy</label>
+                    <select id="DefaultEpisodeStrategy" is="emby-select">
+                        <option value="EqualEpisode">Equal episode</option>
+                        <option value="EqualShow">Equal show</option>
+                    </select>
+                </div>
+
+                <div class="selectContainer">
+                    <label class="selectLabel" for="DefaultWatchedFilter">Default watched filter</label>
+                    <select id="DefaultWatchedFilter" is="emby-select">
+                        <option value="All">All</option>
+                        <option value="Unwatched">Unwatched</option>
+                        <option value="Watched">Watched</option>
+                    </select>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="AnimationEnabled" type="checkbox" is="emby-checkbox">
+                        <span>Roulette presentation</span>
+                    </label>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="AnimationAudio" type="checkbox" is="emby-checkbox">
+                        <span>Animation audio</span>
+                    </label>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="Confetti" type="checkbox" is="emby-checkbox">
+                        <span>Confetti</span>
+                    </label>
+                </div>
+
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="AnimationDurationMs">Animation duration (ms)</label>
+                    <input id="AnimationDurationMs" type="number" is="emby-input" min="500" max="10000">
+                </div>
+
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="HistorySize">History size</label>
+                    <input id="HistorySize" type="number" is="emby-input" min="0" max="20">
+                </div>
+
+                <div>
+                    <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                        <span>Save</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        var RandomizerConfig = {
+            pluginUniqueId: '4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41'
+        };
+
+        document.querySelector('#randomizerConfigurationPage')
+            .addEventListener('pageshow', function () {
+                Dashboard.showLoadingMsg();
+                ApiClient.getPluginConfiguration(RandomizerConfig.pluginUniqueId).then(function (config) {
+                    document.querySelector('#Enabled').checked = !!config.Enabled;
+                    document.querySelector('#DefaultEpisodeStrategy').value = config.DefaultEpisodeStrategy || 'EqualEpisode';
+                    document.querySelector('#DefaultWatchedFilter').value = config.DefaultWatchedFilter || 'All';
+                    document.querySelector('#AnimationEnabled').checked = !!config.AnimationEnabled;
+                    document.querySelector('#AnimationAudio').checked = !!config.AnimationAudio;
+                    document.querySelector('#Confetti').checked = !!config.Confetti;
+                    document.querySelector('#AnimationDurationMs').value = config.AnimationDurationMs ?? 2200;
+                    document.querySelector('#HistorySize').value = config.HistorySize ?? 0;
+                    Dashboard.hideLoadingMsg();
+                }).catch(function (err) {
+                    Dashboard.hideLoadingMsg();
+                    Dashboard.alert('Unable to load Randomizer settings.');
+                    console.error(err);
+                });
+            });
+
+        document.querySelector('#randomizerConfigurationForm')
+            .addEventListener('submit', function (e) {
+                Dashboard.showLoadingMsg();
+
+                ApiClient.getPluginConfiguration(RandomizerConfig.pluginUniqueId).then(function (config) {
+                    config.Enabled = document.querySelector('#Enabled').checked;
+                    config.DefaultEpisodeStrategy = document.querySelector('#DefaultEpisodeStrategy').value;
+                    config.DefaultWatchedFilter = document.querySelector('#DefaultWatchedFilter').value;
+                    config.AnimationEnabled = document.querySelector('#AnimationEnabled').checked;
+                    config.AnimationAudio = document.querySelector('#AnimationAudio').checked;
+                    config.Confetti = document.querySelector('#Confetti').checked;
+                    config.AnimationDurationMs = parseInt(document.querySelector('#AnimationDurationMs').value, 10) || 2200;
+                    config.HistorySize = parseInt(document.querySelector('#HistorySize').value, 10) || 0;
+
+                    return ApiClient.updatePluginConfiguration(RandomizerConfig.pluginUniqueId, config);
+                }).then(function (result) {
+                    Dashboard.processPluginConfigurationUpdateResult(result);
+                    Dashboard.hideLoadingMsg();
+                }).catch(function (err) {
+                    Dashboard.hideLoadingMsg();
+                    Dashboard.alert('Unable to save Randomizer settings.');
+                    console.error(err);
+                });
+
+                e.preventDefault();
+                return false;
+            });
+    </script>
+</div>
 </body>
 </html>
