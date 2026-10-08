@@ -19,29 +19,38 @@ public sealed class RandomizerStartupService : IScheduledTask
 
     public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
+        logger.LogInformation("Randomizer startup service executing.");
         await Task.Yield();
 
         try
         {
-            var fileTransformationAssembly = AssemblyLoadContext.All
-                .SelectMany(context => context.Assemblies)
-                .FirstOrDefault(assembly =>
-                    assembly.FullName?.Contains(".FileTransformation", StringComparison.Ordinal) == true);
+            var fileTransformationAssembly =
+                AssemblyLoadContext.All
+                    .SelectMany(x => x.Assemblies)
+                    .FirstOrDefault(x => x.FullName?.Contains(".FileTransformation", StringComparison.Ordinal) ?? false);
 
             if (fileTransformationAssembly is null)
             {
-                logger.LogDebug("Jellyfin File Transformation plugin was not found; Randomizer Web integration is disabled.");
+                logger.LogWarning("Randomizer could not find the File Transformation assembly.");
                 return;
             }
+
+            logger.LogInformation("Randomizer found File Transformation assembly {Assembly}.", fileTransformationAssembly.FullName);
 
             var pluginInterfaceType = fileTransformationAssembly.GetType(
                 "Jellyfin.Plugin.FileTransformation.PluginInterface");
 
-            var registerMethod = pluginInterfaceType?.GetMethod("RegisterTransformation");
+            if (pluginInterfaceType is null)
+            {
+                logger.LogWarning("Randomizer found File Transformation but PluginInterface type was unavailable.");
+                return;
+            }
+
+            var registerMethod = pluginInterfaceType.GetMethod("RegisterTransformation");
 
             if (registerMethod is null)
             {
-                logger.LogWarning("Jellyfin File Transformation plugin was found, but its registration API was unavailable.");
+                logger.LogWarning("Randomizer found File Transformation PluginInterface but RegisterTransformation was unavailable.");
                 return;
             }
 
@@ -49,7 +58,7 @@ public sealed class RandomizerStartupService : IScheduledTask
             {
                 ["id"] = TransformationId,
                 ["fileNamePattern"] = "index.html",
-                ["callbackAssembly"] = GetType().Assembly.FullName,
+                ["callbackAssembly"] = typeof(RandomizerWebTransformation).Assembly.FullName,
                 ["callbackClass"] = typeof(RandomizerWebTransformation).FullName,
                 ["callbackMethod"] = nameof(RandomizerWebTransformation.TransformIndexHtml)
             };
@@ -57,9 +66,9 @@ public sealed class RandomizerStartupService : IScheduledTask
             registerMethod.Invoke(null, new object?[] { payload });
             logger.LogInformation("Registered Jellyfin Randomizer Web transformation for index.html.");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException and ex is not StackOverflowException)
         {
-            logger.LogWarning(ex, "Unable to register the Jellyfin Randomizer Web transformation. The server plugin will continue without Web injection.");
+            logger.LogError(ex, "Unable to register the Jellyfin Randomizer Web transformation.");
         }
     }
 
