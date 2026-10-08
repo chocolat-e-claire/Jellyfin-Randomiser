@@ -204,7 +204,9 @@ ADMIN_LIBS="$(curl -fsS -H "X-Emby-Token: $ADMIN_TOKEN" "$BASE_URL/Randomizer/Li
 export ADMIN_LIBS
 python3 - <<'PY'
 import json, os
-names = {x["name"] for x in json.loads(os.environ["ADMIN_LIBS"])}
+def value(item, key):
+    return item.get(key, item.get(key[:1].upper() + key[1:]))
+names = {value(x, "name") for x in json.loads(os.environ["ADMIN_LIBS"])}
 print("Admin Randomizer libraries:", sorted(names))
 assert names == {"Allowed Movies", "Allowed Shows", "Blocked Movies"}, names
 PY
@@ -217,7 +219,10 @@ VISIBLE="$(user_get '/Randomizer/Libraries')"
 export VISIBLE
 python3 - <<'PY'
 import json, os
-names = {x["name"] for x in json.loads(os.environ["VISIBLE"])}
+def value(item, key):
+    return item.get(key, item.get(key[:1].upper() + key[1:]))
+names = {value(x, "name") for x in json.loads(os.environ["VISIBLE"])}
+print("Restricted Randomizer libraries:", sorted(names))
 assert names == {"Allowed Movies", "Allowed Shows"}, names
 PY
 
@@ -228,7 +233,9 @@ python3 - <<'PY'
 import json, os
 items = json.loads(os.environ["SEARCH"])
 assert len(items) == 1, items
-assert items[0]["name"] == "Allowed Movie 1", items
+name = items[0].get("name", items[0].get("Name"))
+print("Search result:", name)
+assert name == "Allowed Movie 1", items
 PY
 
 echo "== Resolve fixture IDs =="
