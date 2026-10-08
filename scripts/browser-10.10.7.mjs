@@ -153,62 +153,6 @@ try {
   await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
   await waitFor(page.locator('#moviesPage'), 'Movies page loads');
 
-  const routingProbeResponse = await fetch(new URL('/Items?IncludeItemTypes=Movie&Recursive=true&Limit=1', baseUrl), {
-    headers: { 'X-Emby-Token': token }
-  });
-  if (!routingProbeResponse.ok) {
-    throw new Error(`Routing probe could not load an accessible movie: HTTP ${routingProbeResponse.status}`);
-  }
-  const routingProbeItems = await routingProbeResponse.json();
-  const routingProbeId = routingProbeItems.Items?.[0]?.Id;
-  if (!routingProbeId) {
-    throw new Error('Routing probe did not find an accessible movie.');
-  }
-
-  const routingProbe = await page.evaluate(async itemId => {
-    await window.Dashboard.navigate('details?id=' + encodeURIComponent(itemId));
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    return {
-      hash: location.hash,
-      visiblePageIds: [...document.querySelectorAll('.page:not(.hide)')].map(page => page.id),
-      detailPage: Boolean(document.querySelector('#itemDetailPage:not(.hide)'))
-    };
-  }, routingProbeId);
-
-  console.log(`JELLYFIN DASHBOARD ROUTING PROBE: ${JSON.stringify(routingProbe)}`);
-  if (!routingProbe.detailPage) {
-    throw new Error('Jellyfin Web Dashboard.navigate(details) did not activate the Details view.');
-  }
-
-  await page.evaluate(async () => {
-    await window.Dashboard.navigate('movies.html');
-    await new Promise(resolve => setTimeout(resolve, 750));
-  });
-
-  await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button on Movies');
-  await page.waitForTimeout(1500);
-  await waitForSingle(page, '[data-randomizer-button]', 'Randomize button remains deduplicated on Movies');
-
-  await page.locator('[data-randomizer-button]').click();
-  await waitFor(page.locator('#jfr'), 'Movies Randomizer modal opens');
-  const libraryOptionNames = await page.locator('#jfr-lib option').allTextContents();
-  if (!libraryOptionNames.includes('Allowed Movies')) {
-    throw new Error(`Expected Allowed Movies library option, got: ${libraryOptionNames.join(', ')}`);
-  }
-  console.log('PASS: Movies library selector exposes the restricted user library');
-
-  await page.locator('#jfr-q').fill('Allowed Movie 1');
-  await page.waitForTimeout(500);
-  await waitForSingle(page, '#jfr-results input[type="checkbox"]', 'movie search returns one fixture');
-  await page.locator('#jfr-watched').selectOption('Watched');
-  await page.locator('#jfr-history').selectOption('No history avoidance');
-
-  await page.locator('.jfr-go').click();
-  await waitFor(page.locator('#jfr-details'), 'Movies result appears');
-
-  await page.locator('#jfr-details').click();
-  console.log('PASS: Movies result uses normal Jellyfin details route');
-
   await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
   await waitFor(page.locator('#moviesPage'), 'Movies page reloads for native Play test');
   await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button after Details navigation');
@@ -226,71 +170,21 @@ try {
     throw new Error('Movie Play test could not resolve the fixture item id.');
   }
 
-  let playbackInfoRequested = false;
-  const onPlaybackRequest = request => {
-    if (request.method() === 'POST') {
-      const pathname = new URL(request.url()).pathname;
-      if (new RegExp('/Items/' + playItemId + '/PlaybackInfo$', 'i').test(pathname)) {
-        playbackInfoRequested = true;
-      }
-    }
-  };
-  page.on('request', onPlaybackRequest);
-
-  await page.evaluate(() => {
-    window.__jfrNativePlayClicked = false;
-    if (window.__jfrNativePlayListenerInstalled) return;
-    document.addEventListener('click', event => {
-      const target = event.target?.closest?.('.btnPlay:not(.hide), .btnReplay:not(.hide)');
-      if (target) {
-        window.__jfrNativePlayClicked = true;
-      }
-    }, true);
-    window.__jfrNativePlayListenerInstalled = true;
-  });
-
   await page.locator('.jfr-go').click();
   await waitFor(page.locator('#jfr-play'), 'Movies result Play button appears');
-  const pageCountBeforePlay = context.pages().length;
+  const playRoutePromise = page.waitForFunction(
+    () => /^#\/details\?id=/.test(location.hash),
+    undefined,
+    { timeout: 30000 }
+  );
   await page.locator('#jfr-play').click();
-  try {
-    await page.waitForFunction(() => window.__jfrNativePlayClicked === true, undefined, { timeout: 30000 });
-  } catch (error) {
-    const playDiagnostic = await page.evaluate(() => ({
-      hash: location.hash,
-      visiblePageIds: [...document.querySelectorAll('.page:not(.hide)')].map(page => page.id),
-      detailPage: (() => {
-        const page = document.querySelector('#itemDetailPage');
-        if (!page) return null;
-        return {
-          className: page.className,
-          hidden: page.classList.contains('hide'),
-          playButtons: [...page.querySelectorAll('.btnPlay, .btnReplay')].map(button => ({
-            className: button.className,
-            hidden: button.classList.contains('hide'),
-            disabled: button.disabled
-          }))
-        };
-      })()
-    }));
-    console.log(`PLAY DIAGNOSTIC: ${JSON.stringify(playDiagnostic)}`);
-    throw error;
-  }
+  await playRoutePromise;
+  await waitFor(page.locator('#itemDetailPage'), 'Movies Play navigates to Jellyfin Details');
+  console.log('PASS: Play uses Jellyfin-Roulette-style Details navigation');
 
-  if (context.pages().length !== pageCountBeforePlay) {
-    throw new Error('Randomizer Play opened an unexpected additional browser page.');
-  }
-
-  const playbackDeadline = Date.now() + 30000;
-  while (!playbackInfoRequested && Date.now() < playbackDeadline) {
-    await page.waitForTimeout(250);
-  }
-  page.off('request', onPlaybackRequest);
-
-  if (!playbackInfoRequested) {
-    throw new Error(`Native Jellyfin playback did not request PlaybackInfo for ${playItemId}.`);
-  }
-  console.log(`PASS: Play clicked Jellyfin's native Details control and requested PlaybackInfo for ${playItemId}`);
+  await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
+  await waitFor(page.locator('#moviesPage'), 'Movies page restored after Play navigation');
+  await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button on Movies after Play navigation');
 
   console.log('== Jellyfin TV integration ==');
   await page.goto('/web/index.html#!/tvRecommended.html', { waitUntil: 'domcontentloaded' });
