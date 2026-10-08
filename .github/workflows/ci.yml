@@ -24,17 +24,20 @@ jobs:
           cp Jellyfin.Plugin.Randomizer/meta.json package/Jellyfin.Plugin.Randomizer/
           find package/Jellyfin.Plugin.Randomizer -exec touch -d '1980-01-01 00:00:00 UTC' {} +
           cd package/Jellyfin.Plugin.Randomizer
-          zip -X -r ../../Jellyfin.Plugin.Randomizer_0.1.0.1.zip .
-          md5sum ../../Jellyfin.Plugin.Randomizer_0.1.0.1.zip
+          zip -X -r ../../Jellyfin.Plugin.Randomizer_0.1.0.2.zip .
+          md5sum ../../Jellyfin.Plugin.Randomizer_0.1.0.2.zip
       - name: Upload plugin package
         uses: actions/upload-artifact@v4
         with:
-          name: Jellyfin.Plugin.Randomizer_0.1.0.1
-          path: Jellyfin.Plugin.Randomizer_0.1.0.1.zip
+          name: Jellyfin.Plugin.Randomizer_0.1.0.2
+          path: Jellyfin.Plugin.Randomizer_0.1.0.2.zip
       - name: Publish GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if ! gh release view v0.1.0.1 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create v0.1.0.1 Jellyfin.Plugin.Randomizer_0.1.0.1.zip               --repo "$GITHUB_REPOSITORY"               --title "Jellyfin Randomizer v0.1.0.1"               --notes "Jellyfin 10.10.7-compatible plugin release."               --target "$GITHUB_SHA"
-          fi
+          gh release create v0.1.0.2 Jellyfin.Plugin.Randomizer_0.1.0.2.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Jellyfin Randomizer v0.1.0.2" \
+            --notes "Jellyfin 10.10.7-compatible plugin release with corrected repository packaging/checksum." \
+            --target "$GITHUB_SHA"
