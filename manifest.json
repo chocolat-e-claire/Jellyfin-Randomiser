@@ -12,7 +12,7 @@
         "changelog": "Fix plugin configuration saving using Jellyfin's standard plugin configuration API.",
         "targetAbi": "10.10.7.0",
         "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.5/Jellyfin.Plugin.Randomizer_0.1.0.5.zip",
-        "checksum": "TO_BE_FILLED_AFTER_RELEASE_VERIFICATION",
+        "checksum": "eb94cb4f9e1440bffd3783ce2808ee17",
         "timestamp": "2026-10-08T00:00:00Z"
       }
     ]
