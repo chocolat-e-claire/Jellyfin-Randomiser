@@ -2,24 +2,33 @@
 set -euo pipefail
 
 ROOT="${1:-smoke-media}"
+ROOT_ABS="$(pwd)/${ROOT}"
+FFMPEG_IMAGE="${FFMPEG_IMAGE:-jellyfin/jellyfin:10.10.7}"
 
-if ! command -v ffmpeg >/dev/null 2>&1; then
-  sudo apt-get update
-  sudo apt-get install -y ffmpeg
+USE_CONTAINER_FFMPEG=false
+if command -v ffmpeg >/dev/null 2>&1; then
+  FFMPEG_COMMAND=(ffmpeg)
+else
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "ffmpeg is unavailable and Docker is not installed." >&2
+    exit 1
+  fi
+  USE_CONTAINER_FFMPEG=true
 fi
 
 make_video() {
   local path="$1"
   local color="$2"
+  local relative="${path#"${ROOT}/"}"
+
   mkdir -p "$(dirname "$path")"
-  ffmpeg -hide_banner -loglevel error -y \
-    -f lavfi -i "color=c=${color}:s=320x180:d=1" \
-    -f lavfi -i "anullsrc=r=48000:cl=mono" \
-    -t 1 \
-    -c:v libx264 -pix_fmt yuv420p \
-    -c:a aac -shortest \
-    -movflags +faststart \
-    "$path"
+
+  if [ "$USE_CONTAINER_FFMPEG" = false ]; then
+    "${FFMPEG_COMMAND[@]}" -hide_banner -loglevel error -y       -f lavfi -i "color=c=${color}:s=320x180:d=1"       -f lavfi -i "anullsrc=r=48000:cl=mono"       -t 1       -c:v libx264 -pix_fmt yuv420p       -c:a aac -shortest       -movflags +faststart       "$path"
+    return
+  fi
+
+  docker run --rm     --entrypoint /usr/lib/jellyfin-ffmpeg/ffmpeg     -v "${ROOT_ABS}:/out"     "${FFMPEG_IMAGE}"     -hide_banner -loglevel error -y     -f lavfi -i "color=c=${color}:s=320x180:d=1"     -f lavfi -i "anullsrc=r=48000:cl=mono"     -t 1     -c:v libx264 -pix_fmt yuv420p     -c:a aac -shortest     -movflags +faststart     "/out/${relative}"
 }
 
 rm -rf "$ROOT"
