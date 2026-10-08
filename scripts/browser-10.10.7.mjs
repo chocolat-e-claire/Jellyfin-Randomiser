@@ -174,7 +174,7 @@ try {
   await waitFor(page.locator('#jfr-details'), 'Movies result appears');
 
   await page.locator('#jfr-details').click();
-  await page.waitForURL(/#!\/details\?id=/, { timeout: 30000 });
+  await page.waitForFunction(() => /^#\/details\?id=/.test(location.hash), undefined, { timeout: 30000 });
   console.log('PASS: Movies result uses normal Jellyfin details route');
 
   await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
