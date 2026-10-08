@@ -1,1 +1,310 @@
-(function(){'use strict';const C=window.JellyfinRandomizerConfig||{},MARK='data-randomizer-button';let type=null;function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}async function api(url,opt={}){const r=await fetch(url,{credentials:'same-origin',...opt,headers:{'Content-Type':'application/json',...(opt.headers||{})}});if(!r.ok)throw Error(await r.text()||('HTTP '+r.status));return r.json();}function pageType(){const u=(location.href+' '+document.title).toLowerCase();if(/movies/.test(u))return'Movie';if(/tvshows|tv%20shows|television/.test(u))return'Series';return null;}function host(){return document.querySelector('.sectionTitleContainer,.pageTitleContainer,.libraryPage .sectionTitleContainer');}function add(){if(C.enabled===false||document.querySelector('['+MARK+']')||(type=pageType())===null)return;const h=host();if(!h)return;const b=document.createElement('button');b.type='button';b.className='emby-button raised';b.setAttribute(MARK,'');b.textContent='🎲 Randomize';b.onclick=()=>open();h.appendChild(b);}function open(){const old=document.getElementById('jfr');if(old)old.remove();const d=document.createElement('div');d.id='jfr';d.className='jfr-backdrop';d.innerHTML='<div class="jfr-modal" role="dialog" aria-modal="true" aria-labelledby="jfr-title"><div class="jfr-head"><h2 id="jfr-title">🎲 Randomize '+(type==='Movie'?'Movies':'TV Shows')+'</h2><button class="jfr-close" aria-label="Close">×</button></div><select id="jfr-lib" aria-label="Library"></select><input id="jfr-q" class="jfr-search" placeholder="Search titles" aria-label="Search titles"><div id="jfr-results" class="jfr-results"></div><div class="jfr-controls">'+(type==='Series'?'<label><input type="radio" name="jfr-mode" value="RandomShow" checked> Random Show</label><label><input type="radio" name="jfr-mode" value="RandomEpisode"> Random Episode</label><select id="jfr-strategy"><option value="EqualEpisode">Equal per episode</option><option value="EqualShow">Equal per show</option></select>':'<b>Random Movie</b>')+'<select id="jfr-watched"><option>All</option><option>Unwatched</option><option>Watched</option></select><select id="jfr-history"><option value="0">No history avoidance</option><option value="1">Avoid 1 recent</option><option value="5">Avoid 5 recent</option><option value="10">Avoid 10 recent</option><option value="20">Avoid 20 recent</option></select></div><div class="jfr-actions"><button class="jfr-close2">Cancel</button><button class="jfr-go">Randomize</button></div></div>';document.body.appendChild(d);d.querySelectorAll('.jfr-close,.jfr-close2').forEach(x=>x.onclick=()=>d.remove());d.onkeydown=e=>{if(e.key==='Escape')d.remove()};d.tabIndex=-1;d.focus();loadLibraries();d.querySelector('#jfr-q').oninput=()=>search();d.querySelector('.jfr-go').onclick=()=>randomize(d);}async function loadLibraries(){const d=document.getElementById('jfr'),s=d?.querySelector('#jfr-lib');if(!s)return;try{const a=await api('/Randomizer/Libraries');s.innerHTML='<option value="">Entire accessible library</option>'+a.map(x=>'<option value="'+x.id+'">'+esc(x.name)+'</option>').join('');s.onchange=()=>search();await search();}catch(e){console.error(e);}}async function search(){const d=document.getElementById('jfr');if(!d)return;try{const data=await api('/Randomizer/Search?libraryId='+(encodeURIComponent(d.querySelector('#jfr-lib').value))+'&itemType='+type+'&search='+encodeURIComponent(d.querySelector('#jfr-q').value)+'&limit=100');d.querySelector('#jfr-results').innerHTML=data.map(x=>'<label><input type="checkbox" value="'+x.id+'"> '+esc(x.name)+'</label>').join('')||'<span>No matching titles.</span>';}catch(e){d.querySelector('#jfr-results').textContent='Search failed.';}}async function randomize(d){const ids=[...d.querySelectorAll('#jfr-results input:checked')].map(x=>x.value);const mode=d.querySelector('[name=jfr-mode]:checked')?.value||(type==='Series'?'RandomShow':'RandomMovie');const body={mode,libraryId:d.querySelector('#jfr-lib').value||null,itemIds:ids,strategy:d.querySelector('#jfr-strategy')?.value||C.defaultEpisodeStrategy||'EqualEpisode',watched:d.querySelector('#jfr-watched').value,avoidRecent:Number(d.querySelector('#jfr-history').value)};d.querySelector('.jfr-go').disabled=true;try{const r=await api('/Randomizer/Randomize',{method:'POST',body:JSON.stringify(body)});d.querySelector('.jfr-modal').innerHTML='<div class="jfr-result"><div class="jfr-die">🎲</div><h2>'+esc(r.name)+'</h2>'+(r.seriesName?'<p>'+esc(r.seriesName)+' · S'+String(r.seasonNumber??0).padStart(2,'0')+'E'+String(r.episodeNumber??0).padStart(2,'0')+'</p>':'')+'<p>'+esc(r.overview||'')+'</p><div class="jfr-actions"><button id="jfr-close">Close</button><button id="jfr-details">Open Details</button><button id="jfr-play">▶ Play</button></div></div>';d.querySelector('#jfr-close').onclick=()=>d.remove();d.querySelector('#jfr-details').onclick=()=>{location.hash='#/details?id='+r.itemId;d.remove();};d.querySelector('#jfr-play').onclick=()=>{if(window.playbackManager?.playItems)window.playbackManager.playItems([{Id:r.itemId}]);else location.hash='#/details?id='+r.itemId;};}catch(e){d.querySelector('.jfr-modal').insertAdjacentHTML('beforeend','<p>'+esc(e.message)+'</p>');d.querySelector('.jfr-go').disabled=false;}}let last='';new MutationObserver(add).observe(document.body,{childList:true,subtree:true});setInterval(()=>{if(location.href!==last){last=location.href;add();}},750);add();})();
+(function () {
+    'use strict';
+
+    const CONFIG_ID = '4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41';
+    const BUTTON_MARK = 'data-randomizer-button';
+    const API = window.ApiClient;
+    const C = window.JellyfinRandomizerConfig || {};
+    let type = null;
+
+    function esc(value) {
+        return String(value ?? '').replace(/[&<>"']/g, c => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[c]));
+    }
+
+    function apiUrl(path) {
+        return API.getUrl(path.replace(/^\//, ''));
+    }
+
+    function getJson(path) {
+        return API.getJSON(apiUrl(path), true);
+    }
+
+    function postJson(path, body) {
+        return API.ajax({
+            type: 'POST',
+            url: apiUrl(path),
+            data: JSON.stringify(body),
+            dataType: 'json',
+            contentType: 'application/json'
+        });
+    }
+
+    function activePage() {
+        return document.querySelector('.page:not(.hide)');
+    }
+
+    function pageType() {
+        const page = activePage();
+        if (!page) {
+            return null;
+        }
+
+        if (page.id === 'moviesPage') {
+            return 'Movie';
+        }
+
+        if (page.id === 'tvRecommendedPage') {
+            return 'Series';
+        }
+
+        return null;
+    }
+
+    function host() {
+        const page = activePage();
+        if (!page) {
+            return null;
+        }
+
+        if (page.id === 'moviesPage') {
+            return page.querySelector('#moviesTab .focuscontainer-x');
+        }
+
+        if (page.id === 'tvRecommendedPage') {
+            return page.querySelector('#seriesTab .focuscontainer-x');
+        }
+
+        return null;
+    }
+
+    function addButton() {
+        type = pageType();
+
+        const existing = document.querySelector('[' + BUTTON_MARK + ']');
+        if (type === null) {
+            existing?.remove();
+            return;
+        }
+
+        if (C.enabled === false || existing) {
+            return;
+        }
+
+        const container = host();
+        if (!container) {
+            return;
+        }
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'randomizerButton autoSize';
+        button.setAttribute(BUTTON_MARK, '');
+        button.title = 'Randomize';
+        button.textContent = '🎲 Randomize';
+        button.addEventListener('click', openModal);
+        container.appendChild(button);
+    }
+
+    function openModal() {
+        const old = document.getElementById('jfr');
+        old?.remove();
+
+        const dialog = document.createElement('div');
+        dialog.id = 'jfr';
+        dialog.className = 'jfr-backdrop';
+        dialog.innerHTML = '<div class="jfr-modal" role="dialog" aria-modal="true" aria-labelledby="jfr-title">' +
+            '<div class="jfr-head"><h2 id="jfr-title">🎲 Randomize ' +
+            (type === 'Movie' ? 'Movies' : 'TV Shows') +
+            '</h2><button class="jfr-close" aria-label="Close">×</button></div>' +
+            '<select id="jfr-lib" aria-label="Library"></select>' +
+            '<input id="jfr-q" class="jfr-search" placeholder="Search titles" aria-label="Search titles">' +
+            '<div id="jfr-results" class="jfr-results"></div>' +
+            '<div class="jfr-controls">' +
+            (type === 'Series'
+                ? '<label><input type="radio" name="jfr-mode" value="RandomShow" checked> Random Show</label>' +
+                  '<label><input type="radio" name="jfr-mode" value="RandomEpisode"> Random Episode</label>' +
+                  '<select id="jfr-strategy" aria-label="Episode strategy">' +
+                  '<option value="EqualEpisode">Equal per episode</option>' +
+                  '<option value="EqualShow">Equal per show</option></select>'
+                : '<strong>Random Movie</strong>') +
+            '<select id="jfr-watched" aria-label="Watched filter">' +
+            '<option value="All">All</option><option value="Unwatched">Unwatched</option><option value="Watched">Watched</option></select>' +
+            '<select id="jfr-history" aria-label="Recent result avoidance">' +
+            '<option value="0">No history avoidance</option><option value="1">Avoid 1 recent</option>' +
+            '<option value="5">Avoid 5 recent</option><option value="10">Avoid 10 recent</option>' +
+            '<option value="20">Avoid 20 recent</option></select>' +
+            '</div><div class="jfr-actions">' +
+            '<button class="jfr-close2">Cancel</button><button class="jfr-go">Randomize</button>' +
+            '</div></div>';
+
+        document.body.appendChild(dialog);
+
+        dialog.querySelectorAll('.jfr-close,.jfr-close2').forEach(button => {
+            button.addEventListener('click', () => dialog.remove());
+        });
+
+        dialog.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                dialog.remove();
+            }
+        });
+        dialog.tabIndex = -1;
+        dialog.focus();
+
+        const watched = dialog.querySelector('#jfr-watched');
+        watched.value = C.DefaultWatchedFilter || 'All';
+
+        const strategy = dialog.querySelector('#jfr-strategy');
+        if (strategy) {
+            strategy.value = C.DefaultEpisodeStrategy || 'EqualEpisode';
+        }
+
+        const history = dialog.querySelector('#jfr-history');
+        history.value = String(C.HistorySize || 0);
+
+        dialog.querySelector('#jfr-q').addEventListener('input', () => {
+            clearTimeout(window.__jfrSearchTimer);
+            window.__jfrSearchTimer = setTimeout(() => search(dialog), 250);
+        });
+
+        dialog.querySelector('#jfr-lib').addEventListener('change', () => search(dialog));
+        dialog.querySelector('[name="jfr-mode"]')?.addEventListener('change', () => search(dialog));
+        dialog.querySelector('.jfr-go').addEventListener('click', () => randomize(dialog));
+
+        loadLibraries(dialog);
+    }
+
+    async function loadLibraries(dialog) {
+        const select = dialog.querySelector('#jfr-lib');
+
+        try {
+            const libraries = await getJson('/Randomizer/Libraries');
+            select.innerHTML = '<option value="">Entire accessible library</option>' +
+                libraries.map(x => '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>').join('');
+            await search(dialog);
+        } catch (error) {
+            console.error('Jellyfin Randomizer libraries failed', error);
+            dialog.querySelector('#jfr-results').textContent = 'Unable to load accessible libraries.';
+        }
+    }
+
+    async function search(dialog) {
+        const query = new URLSearchParams({
+            itemType: type,
+            search: dialog.querySelector('#jfr-q').value || '',
+            limit: '100'
+        });
+
+        const libraryId = dialog.querySelector('#jfr-lib').value;
+        if (libraryId) {
+            query.set('libraryId', libraryId);
+        }
+
+        try {
+            const data = await getJson('/Randomizer/Search?' + query);
+            dialog.querySelector('#jfr-results').innerHTML =
+                data.map(x => '<label><input type="checkbox" value="' + esc(x.id) + '"> ' +
+                    esc(x.name) + '</label>').join('') || '<span>No matching titles.</span>';
+        } catch (error) {
+            console.error('Jellyfin Randomizer search failed', error);
+            dialog.querySelector('#jfr-results').textContent = 'Search failed.';
+        }
+    }
+
+    async function randomize(dialog) {
+        const button = dialog.querySelector('.jfr-go');
+        const ids = [...dialog.querySelectorAll('#jfr-results input[type="checkbox"]:checked')]
+            .map(input => input.value);
+
+        const mode = dialog.querySelector('[name="jfr-mode"]:checked')?.value ||
+            (type === 'Series' ? 'RandomShow' : 'RandomMovie');
+
+        const body = {
+            mode,
+            libraryId: dialog.querySelector('#jfr-lib').value || null,
+            itemIds: ids,
+            strategy: dialog.querySelector('#jfr-strategy')?.value || C.DefaultEpisodeStrategy || 'EqualEpisode',
+            watched: dialog.querySelector('#jfr-watched').value,
+            avoidRecent: Number(dialog.querySelector('#jfr-history').value)
+        };
+
+        button.disabled = true;
+
+        try {
+            const result = await postJson('/Randomizer/Randomize', body);
+            showResult(dialog, result);
+        } catch (error) {
+            console.error('Jellyfin Randomizer request failed', error);
+            const message = error?.responseJSON?.Message || error?.message || 'Randomization failed.';
+            dialog.querySelector('.jfr-modal').insertAdjacentHTML(
+                'beforeend',
+                '<p class="jfr-error">' + esc(message) + '</p>'
+            );
+            button.disabled = false;
+        }
+    }
+
+    function showResult(dialog, result) {
+        const episode = result.seriesName
+            ? '<p>' + esc(result.seriesName) + ' · S' +
+              String(result.seasonNumber ?? 0).padStart(2, '0') + 'E' +
+              String(result.episodeNumber ?? 0).padStart(2, '0') + '</p>'
+            : '';
+
+        const render = () => {
+            dialog.querySelector('.jfr-modal').innerHTML =
+                '<div class="jfr-result">' +
+                '<div class="jfr-die" aria-hidden="true">🎲</div>' +
+                '<h2>' + esc(result.name) + '</h2>' +
+                episode +
+                '<p>' + esc(result.overview || '') + '</p>' +
+                '<div class="jfr-actions">' +
+                '<button id="jfr-close">Close</button>' +
+                '<button id="jfr-details">Open Details</button>' +
+                '<button id="jfr-play">▶ Play</button>' +
+                '</div></div>';
+
+            dialog.querySelector('#jfr-close').addEventListener('click', () => dialog.remove());
+            dialog.querySelector('#jfr-details').addEventListener('click', () => {
+                location.hash = '#/details?id=' + encodeURIComponent(result.itemId);
+                dialog.remove();
+            });
+            dialog.querySelector('#jfr-play').addEventListener('click', () => {
+                if (window.playbackManager?.playItems) {
+                    window.playbackManager.playItems([{ Id: result.itemId }]);
+                } else {
+                    location.hash = '#/details?id=' + encodeURIComponent(result.itemId);
+                }
+            });
+        };
+
+        if (C.AnimationEnabled === false) {
+            render();
+        } else {
+            dialog.querySelector('.jfr-die')?.remove();
+            setTimeout(render, Math.max(500, Number(C.AnimationDurationMs) || 2200));
+        }
+    }
+
+    function refresh() {
+        window.requestAnimationFrame(addButton);
+    }
+
+    if (!API) {
+        console.error('Jellyfin Randomizer requires Jellyfin Web ApiClient.');
+        return;
+    }
+
+    API.getPluginConfiguration(CONFIG_ID)
+        .then(config => Object.assign(C, {
+            enabled: config.Enabled !== false,
+            DefaultEpisodeStrategy: config.DefaultEpisodeStrategy,
+            DefaultWatchedFilter: config.DefaultWatchedFilter,
+            AnimationEnabled: config.AnimationEnabled,
+            AnimationDurationMs: config.AnimationDurationMs,
+            HistorySize: config.HistorySize
+        }))
+        .catch(() => undefined)
+        .finally(refresh);
+
+    new MutationObserver(refresh).observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('hashchange', refresh);
+    window.setInterval(refresh, 1000);
+    refresh();
+}());
