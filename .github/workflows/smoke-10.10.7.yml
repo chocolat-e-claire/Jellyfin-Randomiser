@@ -17,12 +17,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL             -o plugin.zip             https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.4/Jellyfin.Plugin.Randomizer_0.1.0.4.zip
+          curl -fsSL             -o plugin.zip             https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.5/Jellyfin.Plugin.Randomizer_0.1.0.5.zip
           md5sum plugin.zip
           rm -rf smoke-config
-          mkdir -p "smoke-config/plugins/Jellyfin Randomizer_0.1.0.4"
+          mkdir -p "smoke-config/plugins/Jellyfin Randomizer_0.1.0.5"
           chmod -R a+rwx smoke-config
-          unzip -q plugin.zip -d "smoke-config/plugins/Jellyfin Randomizer_0.1.0.4"
+          unzip -q plugin.zip -d "smoke-config/plugins/Jellyfin Randomizer_0.1.0.5"
 
       - name: Start Jellyfin 10.10.7 with the plugin installed
         shell: bash
