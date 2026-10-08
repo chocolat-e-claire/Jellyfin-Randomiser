@@ -1,6 +1,9 @@
 name: Jellyfin 10.10.7 File Transformation smoke test
 
 on:
+  push:
+    branches:
+      - feature/safe-randomizer-page
   pull_request:
   workflow_dispatch:
 
