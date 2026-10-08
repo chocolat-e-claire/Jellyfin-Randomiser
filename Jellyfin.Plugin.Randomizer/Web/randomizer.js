@@ -249,7 +249,9 @@
                 '.btnPlay:not(.hide), .btnReplay:not(.hide)'
             );
 
-            if (location.hash !== '#/details?id=' + encodeURIComponent(itemId)) {
+            const hashQuery = location.hash.split('?')[1] || '';
+            const currentId = new URLSearchParams(hashQuery).get('id');
+            if (currentId !== itemId || page?.id !== 'itemDetailPage') {
                 return;
             }
 
