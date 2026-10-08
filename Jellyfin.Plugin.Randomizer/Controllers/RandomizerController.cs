@@ -22,6 +22,7 @@ public sealed class RandomizerController : ControllerBase
         service = s;
     }
 
+    [AllowAnonymous]
     [HttpGet("Page")]
     public IActionResult Page()
     {
