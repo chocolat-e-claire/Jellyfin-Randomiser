@@ -152,9 +152,6 @@ try {
   console.log('== Jellyfin Movies integration ==');
   await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
   await waitFor(page.locator('#moviesPage'), 'Movies page loads');
-
-  await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
-  await waitFor(page.locator('#moviesPage'), 'Movies page reloads for native Play test');
   await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button after Details navigation');
   await page.locator('[data-randomizer-button]').click();
   await waitFor(page.locator('#jfr'), 'Movies Randomizer modal reopens');
