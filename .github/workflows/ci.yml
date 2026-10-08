@@ -88,9 +88,15 @@ jobs:
           version="${{ steps.version.outputs.version }}"
           package="release-package/Jellyfin.Plugin.Randomizer_${version}.zip"
           test -f "$package"
-          expected_entries=Jellyfin.Plugin.Randomizer.deps.json\nJellyfin.Plugin.Randomizer.dll\nJellyfin.Plugin.Randomizer.pdb\nmeta.json'
-          actual_entries="$(unzip -Z1 "$package" | sort)"
-          test "$actual_entries" = "$(printf '%s\n' "$expected_entries" | sort)"
+          entries=()
+          while IFS= read -r entry; do
+            entries+=("$entry")
+          done < <(unzip -Z1 "$package" | sort)
+          test "${#entries[@]}" -eq 4
+          test "${entries[0]}" = "Jellyfin.Plugin.Randomizer.deps.json"
+          test "${entries[1]}" = "Jellyfin.Plugin.Randomizer.dll"
+          test "${entries[2]}" = "Jellyfin.Plugin.Randomizer.pdb"
+          test "${entries[3]}" = "meta.json"
           ! unzip -Z1 "$package" | grep -Fxq 'Newtonsoft.Json.dll'
           test "$(unzip -Z1 "$package" | grep -c '/')" -eq 0
           md5="$(md5sum "$package" | cut -d ' ' -f1)"
