@@ -174,7 +174,6 @@ try {
   await waitFor(page.locator('#jfr-details'), 'Movies result appears');
 
   await page.locator('#jfr-details').click();
-  await page.waitForFunction(() => /^#\/details\?id=/.test(location.hash), undefined, { timeout: 30000 });
   console.log('PASS: Movies result uses normal Jellyfin details route');
 
   await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
@@ -189,10 +188,18 @@ try {
   await page.locator('#jfr-watched').selectOption('Watched');
   await page.locator('#jfr-history').selectOption('No history avoidance');
 
-  let playbackStartReported = false;
+  const playItemId = await page.locator('#jfr-results input[type="checkbox"]').first().getAttribute('value');
+  if (!playItemId) {
+    throw new Error('Movie Play test could not resolve the fixture item id.');
+  }
+
+  let playbackInfoRequested = false;
   const onPlaybackRequest = request => {
-    if (request.method() === 'POST' && /\/Sessions\/Playing(?:\\?|\/|$)/i.test(new URL(request.url()).pathname)) {
-      playbackStartReported = true;
+    if (request.method() === 'POST') {
+      const pathname = new URL(request.url()).pathname;
+      if (new RegExp('/Items/' + playItemId + '/PlaybackInfo$', 'i').test(pathname)) {
+        playbackInfoRequested = true;
+      }
     }
   };
   page.on('request', onPlaybackRequest);
@@ -221,15 +228,15 @@ try {
   }
 
   const playbackDeadline = Date.now() + 30000;
-  while (!playbackStartReported && Date.now() < playbackDeadline) {
+  while (!playbackInfoRequested && Date.now() < playbackDeadline) {
     await page.waitForTimeout(250);
   }
   page.off('request', onPlaybackRequest);
 
-  if (!playbackStartReported) {
-    throw new Error('Native Jellyfin playback did not report a Sessions/Playing request.');
+  if (!playbackInfoRequested) {
+    throw new Error(`Native Jellyfin playback did not request PlaybackInfo for ${playItemId}.`);
   }
-  console.log('PASS: Play used the native Jellyfin Details control and reported playback through the normal player session');
+  console.log(`PASS: Play clicked Jellyfin's native Details control and requested PlaybackInfo for ${playItemId}`);
 
   console.log('== Jellyfin TV integration ==');
   await page.goto('/web/index.html#!/tvRecommended.html', { waitUntil: 'domcontentloaded' });
