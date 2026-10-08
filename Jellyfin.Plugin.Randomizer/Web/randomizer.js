@@ -244,14 +244,14 @@
     function nativePlayFromDetails(itemId) {
         let attempts = 0;
         const timer = window.setInterval(() => {
-            const page = activePage();
+            const page = document.querySelector('#itemDetailPage:not(.hide)');
             const button = page?.querySelector(
                 '.btnPlay:not(.hide), .btnReplay:not(.hide)'
             );
 
             const hashQuery = location.hash.split('?')[1] || '';
             const currentId = new URLSearchParams(hashQuery).get('id');
-            if (currentId !== itemId || page?.id !== 'itemDetailPage') {
+            if (currentId !== itemId || !page) {
                 return;
             }
 
