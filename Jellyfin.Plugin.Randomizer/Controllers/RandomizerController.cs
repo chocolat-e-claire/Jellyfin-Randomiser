@@ -35,6 +35,38 @@ public sealed class RandomizerController : ControllerBase
         return Content(reader.ReadToEnd(), "text/html; charset=utf-8");
     }
 
+    [AllowAnonymous]
+    [HttpGet("Script.js")]
+    public IActionResult Script()
+    {
+        using var stream = typeof(Plugin).Assembly.GetManifestResourceStream(
+            "Jellyfin.Plugin.Randomizer.Web.randomizer.js");
+
+        if (stream is null)
+        {
+            return NotFound();
+        }
+
+        using var reader = new StreamReader(stream);
+        return Content(reader.ReadToEnd(), "application/javascript; charset=utf-8");
+    }
+
+    [AllowAnonymous]
+    [HttpGet("Styles.css")]
+    public IActionResult Styles()
+    {
+        using var stream = typeof(Plugin).Assembly.GetManifestResourceStream(
+            "Jellyfin.Plugin.Randomizer.Web.randomizer.css");
+
+        if (stream is null)
+        {
+            return NotFound();
+        }
+
+        using var reader = new StreamReader(stream);
+        return Content(reader.ReadToEnd(), "text/css; charset=utf-8");
+    }
+
     [HttpGet("Libraries")]
     public ActionResult<IReadOnlyList<LibraryDto>> Libraries() =>
         Current() is { } u
