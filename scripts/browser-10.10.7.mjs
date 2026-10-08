@@ -16,7 +16,7 @@ async function authenticate() {
   });
 
   if (!response.ok) {
-    throw new Error(\`Authentication failed: HTTP \${response.status}: \${await response.text()}\`);
+    throw new Error(`Authentication failed: HTTP ${response.status}: ${await response.text()}`);
   }
 
   const result = await response.json();
@@ -29,7 +29,7 @@ async function authenticate() {
 
 async function waitFor(locator, label, timeout = 60000) {
   await locator.waitFor({ state: 'visible', timeout });
-  console.log(\`PASS: \${label}\`);
+  console.log(`PASS: ${label}`);
 }
 
 async function waitForSingle(page, selector, label) {
@@ -40,9 +40,9 @@ async function waitForSingle(page, selector, label) {
   );
   const count = await page.locator(selector).count();
   if (count !== 1) {
-    throw new Error(\`\${label}: expected exactly one element, got \${count}\`);
+    throw new Error(`${label}: expected exactly one element, got ${count}`);
   }
-  console.log(\`PASS: \${label}\`);
+  console.log(`PASS: ${label}`);
 }
 
 const token = await authenticate();
@@ -137,10 +137,10 @@ try {
 
   const resultText = await page.locator('.jfr-result').innerText();
   if (!/Test Show A|Test Show B/i.test(resultText)) {
-    throw new Error(\`TV result did not contain a fixture show name: \${resultText}\`);
+    throw new Error(`TV result did not contain a fixture show name: ${resultText}`);
   }
   if (!/S01E0[12]/.test(resultText)) {
-    throw new Error(\`TV result did not identify an episode: \${resultText}\`);
+    throw new Error(`TV result did not identify an episode: ${resultText}`);
   }
   console.log('PASS: TV Random Episode returns an actual fixture episode');
 
@@ -149,7 +149,7 @@ try {
   console.log('PASS: TV result uses normal Jellyfin details route');
 
   if (pluginErrors.length > 0) {
-    throw new Error(\`Jellyfin Randomizer browser errors:\\n\${pluginErrors.join('\\n')}\`);
+    throw new Error(`Jellyfin Randomizer browser errors:\\n${pluginErrors.join('\\n')}`);
   }
 
   console.log('== Browser acceptance passed ==');
