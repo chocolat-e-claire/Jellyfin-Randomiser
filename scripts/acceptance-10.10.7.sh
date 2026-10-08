@@ -54,16 +54,14 @@ wait_for_http /health
 
 echo "== Complete first-run setup =="
 curl -fsS -X POST "$BASE_URL/Startup/Configuration" \
-  -H 'Content-Type: application/x-www-form-urlencoded' \
-  --data 'UICulture=en-US&MetadataCountryCode=US&PreferredMetadataLanguage=en' >/dev/null
+  -H 'Content-Type: application/json' \
+  --data '{"UICulture":"en-US","MetadataCountryCode":"US","PreferredMetadataLanguage":"en"}' >/dev/null
 curl -fsS -X POST "$BASE_URL/Startup/User" \
-  -H 'Content-Type: application/x-www-form-urlencoded' \
-  --data-urlencode "Name=$ADMIN_USER" \
-  --data-urlencode "Password=$ADMIN_PASS" >/dev/null
-curl -fsS -X POST "$BASE_URL/Startup/RemoteAccess" \
-  -H 'Content-Type: application/x-www-form-urlencoded' \
-  --data 'EnableRemoteAccess=false&EnableAutomaticPortMapping=false' >/dev/null
-curl -fsS -X POST "$BASE_URL/Startup/Complete" >/dev/null
+  -H 'Content-Type: application/json' \
+  --data "{\"Name\":\"$ADMIN_USER\",\"Password\":\"$ADMIN_PASS\"}" >/dev/null
+curl -fsS -X POST "$BASE_URL/Startup/Complete" \
+  -H 'Content-Type: application/json' \
+  --data '{}' >/dev/null
 
 echo "== Authenticate admin =="
 ADMIN_TOKEN="$(token_auth "$ADMIN_USER" "$ADMIN_PASS")"
