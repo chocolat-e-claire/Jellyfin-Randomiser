@@ -21,6 +21,7 @@ jobs:
           echo "58e0338db7b47c31394cbf89f0d041e9  plugin.zip" | md5sum -c -
           rm -rf smoke-config
           mkdir -p "smoke-config/plugins/Jellyfin Randomizer_0.1.0.4"
+          chmod -R a+rwx smoke-config
           unzip -q plugin.zip -d "smoke-config/plugins/Jellyfin Randomizer_0.1.0.4"
 
       - name: Start Jellyfin 10.10.7 with the plugin installed
