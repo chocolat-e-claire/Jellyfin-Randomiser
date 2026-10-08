@@ -181,6 +181,34 @@ PY
 )"
 admin_post "/Users/$TEST_USER_ID/Policy" "$POLICY" >/dev/null
 
+echo "== Verify persisted user policy =="
+PERSISTED_USER="$(admin_get "/Users/$TEST_USER_ID")"
+export PERSISTED_USER ALLOWED_MOVIES_LIB ALLOWED_SHOWS_LIB
+python3 - <<'PY'
+import json, os
+p = json.loads(os.environ["PERSISTED_USER"])["Policy"]
+expected = {
+    os.environ["ALLOWED_MOVIES_LIB"],
+    os.environ["ALLOWED_SHOWS_LIB"],
+}
+actual = set(p["EnabledFolders"])
+print("EnableAllFolders:", p["EnableAllFolders"])
+print("EnabledFolders:", sorted(actual))
+print("ExpectedFolders:", sorted(expected))
+assert p["EnableAllFolders"] is False
+assert actual == expected, (actual, expected)
+PY
+
+echo "== Verify plugin libraries as admin =="
+ADMIN_LIBS="$(curl -fsS -H "X-Emby-Token: $ADMIN_TOKEN" "$BASE_URL/Randomizer/Libraries")"
+export ADMIN_LIBS
+python3 - <<'PY'
+import json, os
+names = {x["name"] for x in json.loads(os.environ["ADMIN_LIBS"])}
+print("Admin Randomizer libraries:", sorted(names))
+assert names == {"Allowed Movies", "Allowed Shows", "Blocked Movies"}, names
+PY
+
 echo "== Authenticate restricted user =="
 USER_TOKEN="$(authenticate "$TEST_USER" "$TEST_PASS")"
 
