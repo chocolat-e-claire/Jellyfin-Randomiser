@@ -1,12 +1,27 @@
 name: CI
-on: [push,pull_request]
+on:
+  push:
+  pull_request:
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
-        with: {dotnet-version: '8.0.x'}
+        with:
+          dotnet-version: '8.0.x'
       - run: dotnet restore Jellyfin-Randomizer.sln
       - run: dotnet build Jellyfin-Randomizer.sln --configuration Release --no-restore
       - run: dotnet test Jellyfin-Randomizer.sln --configuration Release --no-build
+      - name: Package plugin
+        run: |
+          mkdir -p package/Jellyfin.Plugin.Randomizer
+          dotnet publish Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj --configuration Release --no-restore --output package/Jellyfin.Plugin.Randomizer
+          cp Jellyfin.Plugin.Randomizer/meta.json package/Jellyfin.Plugin.Randomizer/
+          cd package
+          zip -r ../Jellyfin.Plugin.Randomizer_0.1.0.0.zip Jellyfin.Plugin.Randomizer
+      - name: Upload plugin package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jellyfin.Plugin.Randomizer_0.1.0.0
+          path: Jellyfin.Plugin.Randomizer_0.1.0.0.zip
