@@ -1,4 +1,6 @@
 name: CI
+permissions:
+  contents: write
 on:
   push:
   pull_request:
@@ -20,10 +22,19 @@ jobs:
           mkdir -p package/Jellyfin.Plugin.Randomizer
           dotnet publish Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj --configuration Release --no-restore --output package/Jellyfin.Plugin.Randomizer
           cp Jellyfin.Plugin.Randomizer/meta.json package/Jellyfin.Plugin.Randomizer/
+          find package/Jellyfin.Plugin.Randomizer -exec touch -d '1980-01-01 00:00:00 UTC' {} +
           cd package
-          zip -r ../Jellyfin.Plugin.Randomizer_0.1.0.0.zip Jellyfin.Plugin.Randomizer
+          zip -X -r ../Jellyfin.Plugin.Randomizer_0.1.0.0.zip Jellyfin.Plugin.Randomizer
+          sha256sum ../Jellyfin.Plugin.Randomizer_0.1.0.0.zip
       - name: Upload plugin package
         uses: actions/upload-artifact@v4
         with:
           name: Jellyfin.Plugin.Randomizer_0.1.0.0
           path: Jellyfin.Plugin.Randomizer_0.1.0.0.zip
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh release view v0.1.0.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create v0.1.0.0 Jellyfin.Plugin.Randomizer_0.1.0.0.zip               --repo "$GITHUB_REPOSITORY"               --title "Jellyfin Randomizer v0.1.0.0"               --notes "Initial Jellyfin 10.10.7 plugin release."               --target "$GITHUB_SHA"
+          fi
