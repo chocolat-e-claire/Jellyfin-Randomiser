@@ -64,6 +64,9 @@ curl -fsS -X POST "$BASE_URL/Startup/Complete" \
   -H 'Content-Type: application/json' \
   --data '{}' >/dev/null
 
+echo "== Verify startup user was created =="
+curl -fsS "$BASE_URL/Users/Public" | python3 -c 'import json,sys; print([(u["Name"],u["Id"]) for u in json.load(sys.stdin)])'
+
 echo "== Authenticate admin =="
 ADMIN_TOKEN="$(token_auth "$ADMIN_USER" "$ADMIN_PASS")"
 ADMIN_HEADER="X-Emby-Token: $ADMIN_TOKEN"
