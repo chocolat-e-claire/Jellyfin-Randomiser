@@ -12,7 +12,7 @@
         "changelog": "Safe Jellyfin 10.10.7 Web integration via File Transformation; adds authenticated Randomizer page and Jellyfin-Roulette-style Details navigation.",
         "targetAbi": "10.10.7.0",
         "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.7/Jellyfin.Plugin.Randomizer_0.1.0.7.zip",
-        "checksum": "d25dbddc88f033e43dff9a4a04e96d14",
+        "checksum": "cf2da867af95caa44103a6a0764c9ddf",
         "timestamp": "2026-10-08T17:09:31Z"
       },
       {
