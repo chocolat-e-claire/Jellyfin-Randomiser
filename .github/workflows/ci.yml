@@ -1,66 +1,67 @@
 name: CI
-permissions:
-  contents: write
 on:
   push:
+    branches: [main]
   pull_request:
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
-      - run: dotnet restore Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj
-      - run: dotnet restore Tests/Jellyfin.Plugin.Randomizer.Tests.csproj
-      - run: dotnet build Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj --configuration Release --no-restore
-      - run: dotnet test Tests/Jellyfin.Plugin.Randomizer.Tests.csproj --configuration Release --no-restore
-      - name: Package plugin
+          dotnet-version: 8.0.x
+      - name: Restore plugin
+        run: dotnet restore Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj
+      - name: Restore tests
+        run: dotnet restore Tests/Jellyfin.Plugin.Randomizer.Tests.csproj
+      - name: Build plugin
+        run: dotnet build Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj --configuration Release --no-restore
+      - name: Test
+        run: dotnet test Tests/Jellyfin.Plugin.Randomizer.Tests.csproj --configuration Release --no-restore
+      - name: Package
+        shell: bash
         run: |
-          rm -rf package
-          mkdir -p package/Jellyfin.Plugin.Randomizer
-          dotnet publish Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj --configuration Release --no-restore --output package/Jellyfin.Plugin.Randomizer
-          cp Jellyfin.Plugin.Randomizer/meta.json package/Jellyfin.Plugin.Randomizer/
-          find package/Jellyfin.Plugin.Randomizer -exec touch -d '1980-01-01 00:00:00 UTC' {} +
-          cd package/Jellyfin.Plugin.Randomizer
-          zip -X -r ../../Jellyfin.Plugin.Randomizer_0.1.0.4.zip .
-          md5sum ../../Jellyfin.Plugin.Randomizer_0.1.0.4.zip
-      - name: Upload plugin package
+          set -euo pipefail
+          rm -rf package Jellyfin.Plugin.Randomizer_0.1.0.4.zip
+          mkdir -p package
+          dotnet publish Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj --configuration Release --no-restore --output package
+          cp Jellyfin.Plugin.Randomizer/meta.json package/meta.json
+          find package -type f -exec touch -d '1980-01-01 00:00:00 UTC' {} +
+          (cd package && zip -X -r ../Jellyfin.Plugin.Randomizer_0.1.0.4.zip .)
+          md5sum Jellyfin.Plugin.Randomizer_0.1.0.4.zip
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Jellyfin.Plugin.Randomizer_0.1.0.4
           path: Jellyfin.Plugin.Randomizer_0.1.0.4.zip
-      - name: Publish GitHub Release and repository manifest
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Jellyfin.Plugin.Randomizer_0.1.0.4
+          path: .
+      - name: Verify package
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Jellyfin.Plugin.Randomizer_0.1.0.4.zip
+          md5sum Jellyfin.Plugin.Randomizer_0.1.0.4.zip
+      - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          CHECKSUM=$(md5sum Jellyfin.Plugin.Randomizer_0.1.0.4.zip | cut -d ' ' -f1)
+          set -euo pipefail
           if ! gh release view v0.1.0.4 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create v0.1.0.4 Jellyfin.Plugin.Randomizer_0.1.0.4.zip \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "Jellyfin Randomizer v0.1.0.4" \
-              --notes "Remove unsafe web response interception; server-only safe release." \
-              --target "$GITHUB_SHA"
-          fi
-          python3 - <<PY
-          import json
-          from pathlib import Path
-          p=Path("manifest.json")
-          data=json.loads(p.read_text())
-          v=data[0]["versions"][0]
-          v["version"]="0.1.0.4"
-          v["changelog"]="Fix Jellyfin 10.10.7 plugin configuration page rendering."
-          v["targetAbi"]="10.10.7.0"
-          v["sourceUrl"]="https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.4/Jellyfin.Plugin.Randomizer_0.1.0.4.zip"
-          v["checksum"]="$CHECKSUM"
-          p.write_text(json.dumps(data, indent=2)+"\n")
-          PY
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add manifest.json
-          if ! git diff --cached --quiet; then
-            git commit -m "Update plugin manifest for v0.1.0.4"
-            git push
+            gh release create v0.1.0.4 Jellyfin.Plugin.Randomizer_0.1.0.4.zip               --repo "$GITHUB_REPOSITORY"               --title "Jellyfin Randomizer v0.1.0.4"               --notes "Safe server-only build; removed HTTP response interception."
           fi
