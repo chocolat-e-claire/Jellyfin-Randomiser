@@ -53,12 +53,12 @@ public sealed class RandomizerStartupService : IScheduledTask
                 return;
             }
 
-            var jobjectType = fileTransformationAssembly.GetType("Newtonsoft.Json.Linq.JObject");
-            var parseMethod = jobjectType?.GetMethod("Parse", new[] { typeof(string) });
+            var payloadType = registerMethod.GetParameters()[0].ParameterType;
+            var parseMethod = payloadType.GetMethod("Parse", new[] { typeof(string) });
 
             if (parseMethod is null)
             {
-                logger.LogWarning("Randomizer found File Transformation but its JObject.Parse API was unavailable.");
+                logger.LogWarning("Randomizer found File Transformation but its registration payload parser was unavailable on {PayloadType}.", payloadType.FullName);
                 return;
             }
 
