@@ -152,6 +152,39 @@ try {
   console.log('== Jellyfin Movies integration ==');
   await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
   await waitFor(page.locator('#moviesPage'), 'Movies page loads');
+
+  const routingProbeResponse = await fetch(new URL('/Items?IncludeItemTypes=Movie&Recursive=true&Limit=1', baseUrl), {
+    headers: { 'X-Emby-Token': token }
+  });
+  if (!routingProbeResponse.ok) {
+    throw new Error(`Routing probe could not load an accessible movie: HTTP ${routingProbeResponse.status}`);
+  }
+  const routingProbeItems = await routingProbeResponse.json();
+  const routingProbeId = routingProbeItems.Items?.[0]?.Id;
+  if (!routingProbeId) {
+    throw new Error('Routing probe did not find an accessible movie.');
+  }
+
+  const routingProbe = await page.evaluate(async itemId => {
+    await window.Dashboard.navigate('details?id=' + encodeURIComponent(itemId));
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    return {
+      hash: location.hash,
+      visiblePageIds: [...document.querySelectorAll('.page:not(.hide)')].map(page => page.id),
+      detailPage: Boolean(document.querySelector('#itemDetailPage:not(.hide)'))
+    };
+  }, routingProbeId);
+
+  console.log(`JELLYFIN DASHBOARD ROUTING PROBE: ${JSON.stringify(routingProbe)}`);
+  if (!routingProbe.detailPage) {
+    throw new Error('Jellyfin Web Dashboard.navigate(details) did not activate the Details view.');
+  }
+
+  await page.evaluate(async () => {
+    await window.Dashboard.navigate('movies.html');
+    await new Promise(resolve => setTimeout(resolve, 750));
+  });
+
   await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button on Movies');
   await page.waitForTimeout(1500);
   await waitForSingle(page, '[data-randomizer-button]', 'Randomize button remains deduplicated on Movies');
