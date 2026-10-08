@@ -72,7 +72,7 @@ const context = await browserInstance.newContext({
 const page = await context.newPage();
 
 async function loginInJellyfinWeb() {
-  await page.goto('/web/index.html#!/login.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(`/web/index.html#!/login?serverid=${encodeURIComponent(serverId)}`, { waitUntil: 'domcontentloaded' });
   await waitFor(page.locator('#loginPage'), 'Jellyfin Web login page loads');
 
   const manualButton = page.locator('.btnManual');
