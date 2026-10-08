@@ -118,7 +118,7 @@ try {
   await waitFor(page.locator('#jfr'), 'Movies Randomizer modal opens');
   const libraryOptionNames = await page.locator('#jfr-lib option').allTextContents();
   if (!libraryOptionNames.includes('Allowed Movies')) {
-    throw new Error(\`Expected Allowed Movies library option, got: \${libraryOptionNames.join(', ')}\`);
+    throw new Error(`Expected Allowed Movies library option, got: ${libraryOptionNames.join(', ')}`);
   }
   console.log('PASS: Movies library selector exposes the restricted user library');
 
@@ -147,9 +147,9 @@ try {
   await page.waitForFunction(() => Array.isArray(window.__jfrPlayCalls), undefined, { timeout: 30000 });
   const playCall = await page.evaluate(() => window.__jfrPlayCalls);
   if (!Array.isArray(playCall) || !playCall[0]?.[0]?.Id) {
-    throw new Error(\`Unexpected playbackManager.playItems arguments: \${JSON.stringify(playCall)}\`);
+    throw new Error(`Unexpected playbackManager.playItems arguments: ${JSON.stringify(playCall)}`);
   }
-  console.log(\`PASS: Play delegated to Jellyfin playbackManager for \${playCall[0][0].Id}\`);
+  console.log(`PASS: Play delegated to Jellyfin playbackManager for ${playCall[0][0].Id}`);
 
   await waitFor(page.locator('#jfr-details'), 'Movies result appears');
   await page.locator('#jfr-details').click();
@@ -169,7 +169,7 @@ try {
   await page.waitForTimeout(500);
   const showSearchCount = await page.locator('#jfr-results input[type="checkbox"]').count();
   if (showSearchCount !== 2) {
-    throw new Error(\`Expected two fixture TV shows, got \${showSearchCount}\`);
+    throw new Error(`Expected two fixture TV shows, got ${showSearchCount}`);
   }
   console.log('PASS: TV search returns both fixture shows');
 
