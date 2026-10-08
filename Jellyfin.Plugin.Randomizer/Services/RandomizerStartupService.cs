@@ -62,7 +62,7 @@ public sealed class RandomizerStartupService : IScheduledTask
                 return;
             }
 
-            var payloadJson = $@"{{"id": "{TransformationId}", "fileNamePattern": "index.html", "callbackAssembly": "{typeof(RandomizerWebTransformation).Assembly.FullName}", "callbackClass": "{typeof(RandomizerWebTransformation).FullName}", "callbackMethod": "{nameof(RandomizerWebTransformation.TransformIndexHtml)}"}}";
+            var payloadJson = $@"{{""id"":""{TransformationId}"",""fileNamePattern"":""index.html"",""callbackAssembly"":""{typeof(RandomizerWebTransformation).Assembly.FullName}"",""callbackClass"":""{typeof(RandomizerWebTransformation).FullName}"",""callbackMethod"":""{nameof(RandomizerWebTransformation.TransformIndexHtml)}""}}";
             var payload = parseMethod.Invoke(null, new object?[] { payloadJson });
 
             registerMethod.Invoke(null, new[] { payload });
