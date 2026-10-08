@@ -410,7 +410,7 @@ print(json.dumps({
     "libraryId": sys.argv[1],
     "itemIds": [sys.argv[2]],
     "strategy": "EqualEpisode",
-    "watched": "Watched",
+    "watched": "Unwatched",
     "avoidRecent": 0
 }))
 PY
