@@ -241,6 +241,21 @@
         }
     }
 
+    function navigateToDetails(itemId, afterNavigation) {
+        const route = 'details?id=' + encodeURIComponent(itemId);
+
+        if (window.Dashboard?.navigate) {
+            return Promise.resolve(window.Dashboard.navigate(route))
+                .then(() => {
+                    afterNavigation?.();
+                });
+        }
+
+        location.hash = '#/' + route;
+        afterNavigation?.();
+        return Promise.resolve();
+    }
+
     function nativePlayFromDetails(itemId) {
         let attempts = 0;
         const timer = window.setInterval(() => {
@@ -291,19 +306,12 @@
 
             dialog.querySelector('#jfr-close').addEventListener('click', () => dialog.remove());
             dialog.querySelector('#jfr-details').addEventListener('click', () => {
-                location.hash = '#/details?id=' + encodeURIComponent(result.itemId);
                 dialog.remove();
+                navigateToDetails(result.itemId);
             });
             dialog.querySelector('#jfr-play').addEventListener('click', () => {
                 dialog.remove();
-
-                if (location.hash === '#/details?id=' + encodeURIComponent(result.itemId)) {
-                    nativePlayFromDetails(result.itemId);
-                    return;
-                }
-
-                location.hash = '#/details?id=' + encodeURIComponent(result.itemId);
-                nativePlayFromDetails(result.itemId);
+                navigateToDetails(result.itemId, () => nativePlayFromDetails(result.itemId));
             });
         };
 
