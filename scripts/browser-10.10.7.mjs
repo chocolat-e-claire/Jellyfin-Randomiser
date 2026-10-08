@@ -220,7 +220,29 @@ try {
   await waitFor(page.locator('#jfr-play'), 'Movies result Play button appears');
   const pageCountBeforePlay = context.pages().length;
   await page.locator('#jfr-play').click();
-  await page.waitForFunction(() => window.__jfrNativePlayClicked === true, undefined, { timeout: 30000 });
+  try {
+    await page.waitForFunction(() => window.__jfrNativePlayClicked === true, undefined, { timeout: 30000 });
+  } catch (error) {
+    const playDiagnostic = await page.evaluate(() => ({
+      hash: location.hash,
+      visiblePageIds: [...document.querySelectorAll('.page:not(.hide)')].map(page => page.id),
+      detailPage: (() => {
+        const page = document.querySelector('#itemDetailPage');
+        if (!page) return null;
+        return {
+          className: page.className,
+          hidden: page.classList.contains('hide'),
+          playButtons: [...page.querySelectorAll('.btnPlay, .btnReplay')].map(button => ({
+            className: button.className,
+            hidden: button.classList.contains('hide'),
+            disabled: button.disabled
+          }))
+        };
+      })()
+    }));
+    console.log(`PLAY DIAGNOSTIC: ${JSON.stringify(playDiagnostic)}`);
+    throw error;
+  }
 
   if (context.pages().length !== pageCountBeforePlay) {
     throw new Error('Randomizer Play opened an unexpected additional browser page.');
