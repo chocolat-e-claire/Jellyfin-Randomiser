@@ -285,6 +285,19 @@ b=json.loads(os.environ["SECOND"])["itemId"]
 assert a != b, (a,b)
 PY
 
+echo "== Unwatched filter excludes a watched explicit item =="
+set +e
+STATUS=$(curl -sS -o "$TMP/unwatched.out" -w '%{http_code}' -X POST \
+  -H "X-Emby-Token: $USER_TOKEN" -H 'Content-Type: application/json' \
+  "$BASE_URL/Randomizer/Randomize" \
+  --data "{\"mode\":\"RandomMovie\",\"libraryId\":\"$ALLOWED_MOVIES_LIB\",\"itemIds\":[\"$ALLOWED_MOVIE_ID\"],\"watched\":\"Unwatched\",\"avoidRecent\":0}")
+set -e
+if [ "$STATUS" -eq 200 ]; then
+  echo "FAIL: watched item was returned by the unwatched filter"
+  cat "$TMP/unwatched.out"
+  exit 1
+fi
+
 echo "== Permission enforcement against an inaccessible explicit ID =="
 set +e
 STATUS=$(curl -sS -o "$TMP/blocked.out" -w '%{http_code}' -X POST \
