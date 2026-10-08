@@ -242,7 +242,9 @@
     }
 
     function navigateToDetails(itemId, afterNavigation) {
-        const route = 'details?id=' + encodeURIComponent(itemId);
+        const serverId = API?.serverId?.();
+        const route = 'details?id=' + encodeURIComponent(itemId) +
+            (serverId ? '&serverId=' + encodeURIComponent(serverId) : '');
 
         if (window.Dashboard?.navigate) {
             return Promise.resolve(window.Dashboard.navigate(route))
