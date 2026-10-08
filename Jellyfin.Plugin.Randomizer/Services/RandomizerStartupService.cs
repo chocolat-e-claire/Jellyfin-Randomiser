@@ -66,7 +66,7 @@ public sealed class RandomizerStartupService : IScheduledTask
             registerMethod.Invoke(null, new object?[] { payload });
             logger.LogInformation("Registered Jellyfin Randomizer Web transformation for index.html.");
         }
-        catch (Exception ex) when (ex is not OutOfMemoryException and ex is not StackOverflowException)
+        catch (Exception ex)
         {
             logger.LogError(ex, "Unable to register the Jellyfin Randomizer Web transformation.");
         }
