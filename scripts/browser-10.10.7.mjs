@@ -177,7 +177,7 @@ try {
   await page.locator('#jfr-play').click();
   await playRoutePromise;
   const playUrl = page.url();
-  if (!/^https?:\/\/[^/]+\/web\/index\.html#!\/details\?id=/.test(playUrl)) {
+  if (!/^https?:\/\/[^/]+\/web\/index\.html#\/details\?id=/.test(playUrl)) {
     throw new Error(`Randomizer Play did not reach the Jellyfin Details route: ${playUrl}`);
   }
   console.log(`PASS: Play uses Jellyfin-Roulette-style Details navigation (${playUrl})`);
