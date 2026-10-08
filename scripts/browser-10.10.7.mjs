@@ -1,4 +1,7 @@
-import { chromium } from 'playwright';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 const baseUrl = process.env.JELLYFIN_URL || 'http://127.0.0.1:8096';
 const username = process.env.JELLYFIN_USER || 'ci-randomizer';
