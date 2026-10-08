@@ -72,8 +72,12 @@ const context = await browserInstance.newContext({
 const page = await context.newPage();
 
 async function loginInJellyfinWeb() {
-  await page.goto(`/web/index.html#!/login?serverid=${encodeURIComponent(serverId)}`, { waitUntil: 'domcontentloaded' });
-  await waitFor(page.locator('#loginPage'), 'Jellyfin Web login page loads');
+  await page.goto('/web/index.html#!/addserver', { waitUntil: 'domcontentloaded' });
+  await waitFor(page.locator('#txtServerHost'), 'Jellyfin Web add-server host field');
+  await page.locator('#txtServerHost').fill(baseUrl);
+  await page.locator('.addServerForm button[type="submit"]').click();
+
+  await waitFor(page.locator('#loginPage'), 'Jellyfin Web login page loads after server connection', 60000);
 
   const manualButton = page.locator('.btnManual');
   if (await manualButton.isVisible()) {
@@ -86,7 +90,7 @@ async function loginInJellyfinWeb() {
   await page.locator('.manualLoginForm button[type="submit"]').click();
 
   await waitFor(page.locator('#homePage'), 'authenticated Jellyfin Web home page', 60000);
-  console.log('PASS: authenticated Jellyfin Web session established through the real login form');
+  console.log('PASS: authenticated Jellyfin Web session established through the real add-server and login flow');
 }
 const pluginErrors = [];
 
