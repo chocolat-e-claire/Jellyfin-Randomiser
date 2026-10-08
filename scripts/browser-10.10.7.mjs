@@ -187,7 +187,7 @@ try {
   await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button on Movies after Play navigation');
 
   console.log('== Jellyfin TV integration ==');
-  await page.goto('/web/index.html#!/tvRecommended.html', { waitUntil: 'domcontentloaded' });
+  await page.goto('/web/index.html#!/tv.html', { waitUntil: 'domcontentloaded' });
   await waitFor(page.locator('#tvRecommendedPage'), 'TV Recommended page loads');
   await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button on TV');
   await page.waitForTimeout(1500);
@@ -225,7 +225,7 @@ try {
 
   await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
   await waitForSingle(page, '[data-randomizer-button]', 'one Movies button after TV navigation');
-  await page.goto('/web/index.html#!/tvRecommended.html', { waitUntil: 'domcontentloaded' });
+  await page.goto('/web/index.html#!/tv.html', { waitUntil: 'domcontentloaded' });
   await waitForSingle(page, '[data-randomizer-button]', 'one TV button after second navigation');
   await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
   await waitForSingle(page, '[data-randomizer-button]', 'one Movies button after repeated SPA navigation');
