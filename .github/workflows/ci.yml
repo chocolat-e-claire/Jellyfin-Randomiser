@@ -36,8 +36,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create v0.1.0.2 Jellyfin.Plugin.Randomizer_0.1.0.2.zip \
+          if ! gh release view v0.1.0.2 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create v0.1.0.2 Jellyfin.Plugin.Randomizer_0.1.0.2.zip \
             --repo "$GITHUB_REPOSITORY" \
             --title "Jellyfin Randomizer v0.1.0.2" \
             --notes "Jellyfin 10.10.7-compatible plugin release with corrected repository packaging/checksum." \
             --target "$GITHUB_SHA"
+          fi
