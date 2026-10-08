@@ -105,11 +105,50 @@
         '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
     }[c]));
 
+    function getAccessToken() {
+        try {
+            const raw = localStorage.getItem('jellyfin_credentials');
+            if (!raw) return '';
+
+            const credentials = JSON.parse(raw);
+            const servers = Array.isArray(credentials.Servers) ? credentials.Servers : [];
+            const currentOrigin = location.origin;
+
+            const current = servers.find(server => {
+                if (!server?.AccessToken) return false;
+                return [server.ManualAddress, server.LocalAddress, server.RemoteAddress]
+                    .filter(Boolean)
+                    .some(address => {
+                        try {
+                            return new URL(address).origin === currentOrigin;
+                        } catch {
+                            return false;
+                        }
+                    });
+            });
+
+            return current?.AccessToken || servers.find(server => server?.AccessToken)?.AccessToken || '';
+        } catch {
+            return '';
+        }
+    }
+
     const api = async (url, options = {}) => {
+        const token = getAccessToken();
+        if (!token) {
+            throw new Error('Jellyfin authentication was not found. Sign in to Jellyfin first, then open Randomizer from the same Jellyfin address.');
+        }
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-Emby-Token': token,
+            ...(options.headers || {})
+        };
+
         const response = await fetch(url, {
             credentials: 'same-origin',
             ...options,
-            headers: {'Content-Type':'application/json', ...(options.headers || {})}
+            headers
         });
         if (!response.ok) {
             throw new Error(await response.text() || ('HTTP ' + response.status));
