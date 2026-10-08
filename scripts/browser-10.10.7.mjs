@@ -101,8 +101,28 @@ await context.addInitScript(({ serverId, baseUrl, token, me }) => {
 const page = await context.newPage();
 
 async function establishJellyfinWebSession() {
-  await page.goto('/web/index.html#!/home.html', { waitUntil: 'domcontentloaded' });
-  await waitFor(page.locator('#homePage'), 'authenticated Jellyfin Web home page');
+  await page.goto('/web/index.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(5000);
+
+  const bootstrapState = await page.evaluate(() => ({
+    url: location.href,
+    title: document.title,
+    bodyText: document.body?.innerText?.slice(0, 2000) || '',
+    credentials: localStorage.getItem('jellyfin_credentials'),
+    autoLogin: localStorage.getItem('enableAutoLogin')
+  }));
+
+  if (!document.querySelector('#homePage')) {
+    console.log(`BOOTSTRAP URL: ${bootstrapState.url}`);
+    console.log(`BOOTSTRAP TITLE: ${bootstrapState.title}`);
+    console.log(`BOOTSTRAP BODY: ${bootstrapState.bodyText.replace(/\\s+/g, ' ').trim()}`);
+    console.log(`BOOTSTRAP CREDENTIALS PRESENT: ${Boolean(bootstrapState.credentials)}`);
+    console.log(`BOOTSTRAP AUTO LOGIN: ${bootstrapState.autoLogin}`);
+    console.log(`BOOTSTRAP RANDOMIZER ERRORS: ${pluginErrors.join(' | ')}`);
+    await page.screenshot({ path: '/tmp/jellyfin-web-bootstrap.png', fullPage: true });
+    throw new Error('Jellyfin Web did not reach the authenticated home page after seeded API authentication.');
+  }
+
   console.log('PASS: authenticated Jellyfin Web session seeded from the real Jellyfin API token');
 }
 const pluginErrors = [];
