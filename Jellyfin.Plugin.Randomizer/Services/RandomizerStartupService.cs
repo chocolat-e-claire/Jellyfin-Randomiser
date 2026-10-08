@@ -67,7 +67,7 @@ public sealed class RandomizerStartupService : IScheduledTask
     {
         yield return new TaskTriggerInfo
         {
-            Type = TaskTriggerInfoType.StartupTrigger
+            Type = TaskTriggerInfo.TriggerStartup
         };
     }
 
