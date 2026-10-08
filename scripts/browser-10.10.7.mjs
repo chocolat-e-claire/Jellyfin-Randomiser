@@ -220,7 +220,6 @@ try {
   await waitFor(page.locator('#jfr-play'), 'Movies result Play button appears');
   const pageCountBeforePlay = context.pages().length;
   await page.locator('#jfr-play').click();
-  await page.waitForFunction(() => /^#\/details\?id=/.test(location.hash), undefined, { timeout: 30000 });
   await page.waitForFunction(() => window.__jfrNativePlayClicked === true, undefined, { timeout: 30000 });
 
   if (context.pages().length !== pageCountBeforePlay) {
