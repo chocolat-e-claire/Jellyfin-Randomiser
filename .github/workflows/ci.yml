@@ -10,11 +10,13 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - run: dotnet restore Jellyfin-Randomizer.sln
-      - run: dotnet build Jellyfin-Randomizer.sln --configuration Release --no-restore
-      - run: dotnet test Jellyfin-Randomizer.sln --configuration Release --no-build
+      - run: dotnet restore Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj
+      - run: dotnet restore Tests/Jellyfin.Plugin.Randomizer.Tests.csproj
+      - run: dotnet build Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj --configuration Release --no-restore
+      - run: dotnet test Tests/Jellyfin.Plugin.Randomizer.Tests.csproj --configuration Release --no-restore
       - name: Package plugin
         run: |
+          rm -rf package
           mkdir -p package/Jellyfin.Plugin.Randomizer
           dotnet publish Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj --configuration Release --no-restore --output package/Jellyfin.Plugin.Randomizer
           cp Jellyfin.Plugin.Randomizer/meta.json package/Jellyfin.Plugin.Randomizer/
