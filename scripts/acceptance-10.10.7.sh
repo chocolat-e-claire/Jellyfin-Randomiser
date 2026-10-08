@@ -409,6 +409,27 @@ if [ "$BLOCKED_STATUS" -eq 200 ]; then
   exit 1
 fi
 
+echo "== Inaccessible explicit ID without library ID =="
+set +e
+BLOCKED_NO_LIBRARY_STATUS="$(curl -sS -o "$TMP/blocked-no-library.out" -w '%{http_code}' -X POST   -H "X-Emby-Token: $USER_TOKEN"   -H 'Content-Type: application/json'   "$BASE_URL/Randomizer/Randomize"   --data "$(python3 - "$BLOCKED_MOVIE_ID" <<'PY'
+import json, sys
+print(json.dumps({
+    "mode": "RandomMovie",
+    "libraryId": None,
+    "itemIds": [sys.argv[1]],
+    "strategy": "EqualEpisode",
+    "watched": "All",
+    "avoidRecent": 0
+}))
+PY
+)")"
+set -e
+if [ "$BLOCKED_NO_LIBRARY_STATUS" -eq 200 ]; then
+  echo "Blocked item was returned without a library scope"
+  cat "$TMP/blocked-no-library.out"
+  exit 1
+fi
+
 echo "== Normal Jellyfin details route =="
 user_get "/Users/$TEST_USER_ID/Items/$ALLOWED_MOVIE_ID" >/dev/null
 
