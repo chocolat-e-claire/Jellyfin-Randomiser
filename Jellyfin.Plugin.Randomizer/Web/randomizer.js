@@ -241,6 +241,32 @@
         }
     }
 
+    function nativePlayFromDetails(itemId) {
+        let attempts = 0;
+        const timer = window.setInterval(() => {
+            const page = activePage();
+            const button = page?.querySelector(
+                '.btnPlay:not(.hide), .btnReplay:not(.hide)'
+            );
+
+            if (location.hash !== '#/details?id=' + encodeURIComponent(itemId)) {
+                return;
+            }
+
+            if (button && !button.disabled) {
+                window.clearInterval(timer);
+                button.click();
+                return;
+            }
+
+            attempts += 1;
+            if (attempts >= 300) {
+                window.clearInterval(timer);
+                console.error('Jellyfin Randomizer could not find the native Jellyfin Play control.');
+            }
+        }, 100);
+    }
+
     function showResult(dialog, result) {
         const episode = result.seriesName
             ? '<p>' + esc(result.seriesName) + ' · S' +
@@ -267,11 +293,15 @@
                 dialog.remove();
             });
             dialog.querySelector('#jfr-play').addEventListener('click', () => {
-                if (window.playbackManager?.playItems) {
-                    window.playbackManager.playItems([{ Id: result.itemId }]);
-                } else {
-                    location.hash = '#/details?id=' + encodeURIComponent(result.itemId);
+                dialog.remove();
+
+                if (location.hash === '#/details?id=' + encodeURIComponent(result.itemId)) {
+                    nativePlayFromDetails(result.itemId);
+                    return;
                 }
+
+                location.hash = '#/details?id=' + encodeURIComponent(result.itemId);
+                nativePlayFromDetails(result.itemId);
             });
         };
 
