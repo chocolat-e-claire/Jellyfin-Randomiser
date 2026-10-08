@@ -137,7 +137,6 @@ try {
 
   console.log('== Standalone Randomizer page ==');
   const standalonePage = await context.newPage();
-  await standalonePage.setExtraHTTPHeaders({ 'X-Emby-Token': token });
   await standalonePage.goto('/Randomizer/Page', { waitUntil: 'domcontentloaded' });
   await waitFor(standalonePage.getByRole('heading', { name: /Jellyfin Randomizer/i }), 'standalone page loads');
   await waitFor(standalonePage.locator('#library'), 'standalone library selector');
@@ -146,6 +145,14 @@ try {
   if (!standaloneLibraries.includes('Allowed Movies')) {
     throw new Error(`Standalone page did not expose the restricted library: ${standaloneLibraries.join(', ')}`);
   }
+
+  await standalonePage.locator('#search').fill('Allowed Movie 1');
+  await standalonePage.waitForTimeout(500);
+  await waitForSingle(standalonePage, '#results input[type="checkbox"]', 'standalone search returns one fixture');
+  await standalonePage.locator('#results input[type="checkbox"]').first().check();
+  await standalonePage.locator('#randomize').click();
+  await waitFor(standalonePage.locator('#result h2'), 'standalone randomizer returns a result');
+
   await standalonePage.close();
   console.log('PASS: standalone Randomizer page loads with the authenticated Jellyfin session');
 
