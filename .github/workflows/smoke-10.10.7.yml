@@ -18,7 +18,9 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL             -o plugin.zip             https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.5/Jellyfin.Plugin.Randomizer_0.1.0.5.zip
-          actual_md5=$(md5sum plugin.zip | cut -d " " -f1)\n          echo "Downloaded release MD5: $actual_md5"\n          test "$actual_md5" = "3c836a4ec6052ea50928289ef0f0f32"
+          actual_md5=$(md5sum plugin.zip | cut -d " " -f1)
+          echo "Downloaded release MD5: $actual_md5"
+          test "$actual_md5" = "3c836a4ec6052ea50928289ef0f0f32"
           rm -rf smoke-config
           mkdir -p "smoke-config/plugins/Jellyfin Randomizer_0.1.0.5"
           chmod -R a+rwx smoke-config
