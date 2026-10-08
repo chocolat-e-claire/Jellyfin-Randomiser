@@ -46,6 +46,21 @@ async function waitForSingle(page, selector, label) {
 }
 
 const token = await authenticate();
+const publicInfoResponse = await fetch(new URL('/System/Info/Public', baseUrl));
+if (!publicInfoResponse.ok) {
+  throw new Error(`Unable to read Jellyfin public system info: HTTP ${publicInfoResponse.status}`);
+}
+const publicInfo = await publicInfoResponse.json();
+const serverId = publicInfo.Id;
+if (!serverId) {
+  throw new Error('Jellyfin public system info did not contain a server Id.');
+}
+
+const meResponse = await fetch(new URL('/Users/Me', baseUrl), { headers: { 'X-Emby-Token': token } });
+if (!meResponse.ok) {
+  throw new Error(`Unable to resolve authenticated Jellyfin user: HTTP ${meResponse.status}`);
+}
+const me = await meResponse.json();
 const browserInstance = await chromium.launch({ headless: true });
 const context = await browserInstance.newContext({
   baseURL: baseUrl,
@@ -53,6 +68,22 @@ const context = await browserInstance.newContext({
     'X-Emby-Token': token
   }
 });
+await context.addInitScript(({ baseUrl, serverId, token, userId }) => {
+  const credentials = {
+    Servers: [{
+      Name: 'Jellyfin Randomizer CI',
+      ManualAddress: baseUrl,
+      LocalAddress: baseUrl,
+      Id: serverId,
+      DateLastAccessed: Date.now(),
+      LastConnectionMode: 1,
+      UserId: userId,
+      AccessToken: token
+    }]
+  };
+  localStorage.setItem('jellyfin_credentials', JSON.stringify(credentials));
+  localStorage.setItem('enableAutoLogin', 'true');
+}, { baseUrl, serverId, token, userId: me.Id });
 
 const page = await context.newPage();
 const pluginErrors = [];
