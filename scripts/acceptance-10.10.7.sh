@@ -199,6 +199,31 @@ assert p["EnableAllFolders"] is False
 assert actual == expected, (actual, expected)
 PY
 
+echo "== Verify plugin configuration round-trip =="
+CONFIG="$(admin_get '/Plugins/4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41/Configuration')"
+export CONFIG
+UPDATED_CONFIG="$(python3 - <<'PY'
+import json, os
+config = json.loads(os.environ["CONFIG"])
+config["HistorySize"] = 7
+config["AnimationDurationMs"] = 1500
+print(json.dumps(config, separators=(",", ":")))
+PY
+)"
+admin_post "/Plugins/4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41/Configuration" "$UPDATED_CONFIG" >/dev/null
+PERSISTED_CONFIG="$(admin_get '/Plugins/4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41/Configuration')"
+export PERSISTED_CONFIG
+python3 - <<'PY'
+import json, os
+config = json.loads(os.environ["PERSISTED_CONFIG"])
+history = config.get("HistorySize", config.get("historySize"))
+duration = config.get("AnimationDurationMs", config.get("animationDurationMs"))
+print("Persisted HistorySize:", history)
+print("Persisted AnimationDurationMs:", duration)
+assert history == 7, config
+assert duration == 1500, config
+PY
+
 echo "== Verify plugin libraries as admin =="
 ADMIN_LIBS="$(curl -fsS -H "X-Emby-Token: $ADMIN_TOKEN" "$BASE_URL/Randomizer/Libraries")"
 export ADMIN_LIBS
