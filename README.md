@@ -12,7 +12,7 @@ Jellyfin plugin targeting **Jellyfin Server 10.10.7 / target ABI 10.10.7.0 / .NE
 - Server-side search with bounded result pages.
 - Server-side permission filtering for explicit IDs.
 - Optional per-user recent-result avoidance (in-memory).
-- Normal Jellyfin details and native playback flows.
+- Normal Jellyfin Details navigation and playback flows.
 - Authenticated standalone Randomizer page.
 - Jellyfin Web integration through the File Transformation plugin.
 - Plugin configuration page.
@@ -31,7 +31,7 @@ The Web integration registers a transformation for `index.html`. The transformat
 
 The injected Web script waits for Jellyfin Web's `window.ApiClient` before initializing, uses the authenticated Jellyfin API for Randomizer requests, and guards against duplicate button injection during SPA navigation.
 
-The Randomizer Play action follows Jellyfin Web's native Details Play control rather than depending on a private or global playback-manager API.
+The Randomizer Play action follows the same normal Details navigation pattern used by Jellyfin-Roulette: it navigates to `/web/index.html#!/details?id=...&serverId=...` and lets Jellyfin Web handle the rest.
 
 File Transformation is an optional integration dependency. When it is unavailable, Randomizer logs a controlled warning and Jellyfin continues starting normally.
 
@@ -63,7 +63,7 @@ The integration acceptance workflow installs File Transformation 2.5.9.0 and Ran
 
 The same workflow runs a separate Jellyfin 10.10.7 leg without File Transformation and verifies that the optional integration failure is non-fatal.
 
-A Playwright/Chromium browser leg verifies authenticated Web startup, the standalone Randomizer page, Movies/TV Randomize buttons, modal controls, restricted library visibility, search, native Jellyfin Details navigation and native playback flow, and repeated Movies → TV → Movies → TV SPA navigation without duplicate injection.
+A Playwright/Chromium browser leg verifies authenticated Web startup, the standalone Randomizer page, Movies/TV Randomize buttons, modal controls, restricted library visibility, search, Jellyfin Details navigation, and repeated Movies → TV → Movies → TV SPA navigation without duplicate injection.
 
 The feature branch remains unreleased until the full isolated acceptance suite passes. The stable `main` branch remains the proven release line.
 
