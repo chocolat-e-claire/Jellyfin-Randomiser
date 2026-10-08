@@ -33,23 +33,18 @@ jobs:
           cp Jellyfin.Plugin.Randomizer/meta.json package/meta.json
           find package -type f -exec touch -d '1980-01-01 00:00:00 UTC' {} +
           (cd package && zip -X -r "../Jellyfin.Plugin.Randomizer_${VERSION}.zip" .)
+
           echo "== Verify exact package contents =="
-          expected_entries=
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Jellyfin.Plugin.Randomizer-package
-          path: Jellyfin.Plugin.Randomizer_*.zip
-Jellyfin.Plugin.Randomizer.deps.json\nJellyfin.Plugin.Randomizer.dll\nJellyfin.Plugin.Randomizer.pdb\nmeta.json'
-          actual_entries="$(unzip -Z1 "Jellyfin.Plugin.Randomizer_\${VERSION}.zip" | sort)"
+          expected_entries=$'Jellyfin.Plugin.Randomizer.deps.json\nJellyfin.Plugin.Randomizer.dll\nJellyfin.Plugin.Randomizer.pdb\nmeta.json'
+          actual_entries="$(unzip -Z1 "Jellyfin.Plugin.Randomizer_${VERSION}.zip" | sort)"
           printf '%s\n' "$actual_entries"
           test "$actual_entries" = "$(printf '%s\n' "$expected_entries" | sort)"
-          ! unzip -Z1 "Jellyfin.Plugin.Randomizer_\${VERSION}.zip" | grep -Fxq 'Newtonsoft.Json.dll'
-          test "$(unzip -Z1 "Jellyfin.Plugin.Randomizer_\${VERSION}.zip" | grep -c '/')" -eq 0
+          ! unzip -Z1 "Jellyfin.Plugin.Randomizer_${VERSION}.zip" | grep -Fxq 'Newtonsoft.Json.dll'
+          test "$(unzip -Z1 "Jellyfin.Plugin.Randomizer_${VERSION}.zip" | grep -c '/')" -eq 0
 
-          size="$(stat -c '%s' "Jellyfin.Plugin.Randomizer_\${VERSION}.zip")"
-          md5="$(md5sum "Jellyfin.Plugin.Randomizer_\${VERSION}.zip" | cut -d ' ' -f1)"
-          sha256="$(sha256sum "Jellyfin.Plugin.Randomizer_\${VERSION}.zip" | cut -d ' ' -f1)"
+          size="$(stat -c '%s' "Jellyfin.Plugin.Randomizer_${VERSION}.zip")"
+          md5="$(md5sum "Jellyfin.Plugin.Randomizer_${VERSION}.zip" | cut -d ' ' -f1)"
+          sha256="$(sha256sum "Jellyfin.Plugin.Randomizer_${VERSION}.zip" | cut -d ' ' -f1)"
           echo "package-size=$size"
           echo "package-md5=$md5"
           echo "package-sha256=$sha256"
@@ -60,7 +55,6 @@ Jellyfin.Plugin.Randomizer.deps.json\nJellyfin.Plugin.Randomizer.dll\nJellyfin.P
             test "$sha256" = "fcc0845d00e6661e2aed6056c5d2dc47b59fbc0bd6a290d84bedd3363de7e9b0"
           fi
 
-          md5sum "Jellyfin.Plugin.Randomizer_${VERSION}.zip"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
