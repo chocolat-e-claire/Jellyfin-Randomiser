@@ -170,33 +170,66 @@ try {
   await page.locator('#jfr-watched').selectOption('Watched');
   await page.locator('#jfr-history').selectOption('No history avoidance');
 
-  await page.evaluate(() => {
-    const pm = window.playbackManager;
-    if (!pm?.playItems) {
-      throw new Error('Jellyfin playbackManager.playItems is unavailable.');
-    }
-    if (window.__jfrPlayWrapped) return;
-    const original = pm.playItems.bind(pm);
-    pm.playItems = (...args) => {
-      window.__jfrPlayCalls = args;
-      return original(...args);
-    };
-    window.__jfrPlayWrapped = true;
-  });
-
   await page.locator('.jfr-go').click();
-  await page.locator('#jfr-play').click();
-  await page.waitForFunction(() => Array.isArray(window.__jfrPlayCalls), undefined, { timeout: 30000 });
-  const playCall = await page.evaluate(() => window.__jfrPlayCalls);
-  if (!Array.isArray(playCall) || !playCall[0]?.[0]?.Id) {
-    throw new Error(`Unexpected playbackManager.playItems arguments: ${JSON.stringify(playCall)}`);
-  }
-  console.log(`PASS: Play delegated to Jellyfin playbackManager for ${playCall[0][0].Id}`);
-
   await waitFor(page.locator('#jfr-details'), 'Movies result appears');
+
   await page.locator('#jfr-details').click();
   await page.waitForURL(/#!\/details\?id=/, { timeout: 30000 });
   console.log('PASS: Movies result uses normal Jellyfin details route');
+
+  await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
+  await waitFor(page.locator('#moviesPage'), 'Movies page reloads for native Play test');
+  await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button after Details navigation');
+  await page.locator('[data-randomizer-button]').click();
+  await waitFor(page.locator('#jfr'), 'Movies Randomizer modal reopens');
+
+  await page.locator('#jfr-q').fill('Allowed Movie 1');
+  await page.waitForTimeout(500);
+  await waitForSingle(page, '#jfr-results input[type="checkbox"]', 'movie search returns one fixture for Play');
+  await page.locator('#jfr-watched').selectOption('Watched');
+  await page.locator('#jfr-history').selectOption('No history avoidance');
+
+  let playbackStartReported = false;
+  const onPlaybackRequest = request => {
+    if (request.method() === 'POST' && /\/Sessions\/Playing(?:\\?|\/|$)/i.test(new URL(request.url()).pathname)) {
+      playbackStartReported = true;
+    }
+  };
+  page.on('request', onPlaybackRequest);
+
+  await page.evaluate(() => {
+    window.__jfrNativePlayClicked = false;
+    if (window.__jfrNativePlayListenerInstalled) return;
+    document.addEventListener('click', event => {
+      const target = event.target?.closest?.('.btnPlay:not(.hide), .btnReplay:not(.hide)');
+      if (target) {
+        window.__jfrNativePlayClicked = true;
+      }
+    }, true);
+    window.__jfrNativePlayListenerInstalled = true;
+  });
+
+  await page.locator('.jfr-go').click();
+  await waitFor(page.locator('#jfr-play'), 'Movies result Play button appears');
+  const pageCountBeforePlay = context.pages().length;
+  await page.locator('#jfr-play').click();
+  await page.waitForURL(/#!\/details\?id=/, { timeout: 30000 });
+  await page.waitForFunction(() => window.__jfrNativePlayClicked === true, undefined, { timeout: 30000 });
+
+  if (context.pages().length !== pageCountBeforePlay) {
+    throw new Error('Randomizer Play opened an unexpected additional browser page.');
+  }
+
+  const playbackDeadline = Date.now() + 30000;
+  while (!playbackStartReported && Date.now() < playbackDeadline) {
+    await page.waitForTimeout(250);
+  }
+  page.off('request', onPlaybackRequest);
+
+  if (!playbackStartReported) {
+    throw new Error('Native Jellyfin playback did not report a Sessions/Playing request.');
+  }
+  console.log('PASS: Play used the native Jellyfin Details control and reported playback through the normal player session');
 
   console.log('== Jellyfin TV integration ==');
   await page.goto('/web/index.html#!/tvRecommended.html', { waitUntil: 'domcontentloaded' });
