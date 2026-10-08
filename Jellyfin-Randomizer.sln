@@ -1,0 +1,20 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jellyfin.Plugin.Randomizer", "Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj", "{A1D0D1D1-5E4D-4D0B-A6D4-3B0E7D9D0001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jellyfin.Plugin.Randomizer.Tests", "Tests/Jellyfin.Plugin.Randomizer.Tests.csproj", "{A1D0D1D1-5E4D-4D0B-A6D4-3B0E7D9D0002}"
+EndProject
+Global
+GlobalSection(SolutionConfigurationPlatforms) = preSolution
+Debug|Any CPU = Debug|Any CPU
+Release|Any CPU = Release|Any CPU
+EndGlobalSection
+GlobalSection(ProjectConfigurationPlatforms) = postSolution
+{A1D0D1D1-5E4D-4D0B-A6D4-3B0E7D9D0001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+{A1D0D1D1-5E4D-4D0B-A6D4-3B0E7D9D0001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+{A1D0D1D1-5E4D-4D0B-A6D4-3B0E7D9D0002}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+{A1D0D1D1-5E4D-4D0B-A6D4-3B0E7D9D0002}.Release|Any CPU.ActiveCfg = Release|Any CPU
+EndGlobalSection
+EndGlobal
