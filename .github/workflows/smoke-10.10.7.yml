@@ -13,11 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download the exact v0.1.0.5 release asset
+      - name: Download the exact v0.1.0.6 release asset
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL             -o plugin.zip             https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.5/Jellyfin.Plugin.Randomizer_0.1.0.5.zip
+          curl -fsSL             -o plugin.zip             https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.6/Jellyfin.Plugin.Randomizer_0.1.0.6.zip
           md5sum plugin.zip
           rm -rf smoke-config
           mkdir -p "smoke-config/plugins/Jellyfin Randomizer_0.1.0.5"
