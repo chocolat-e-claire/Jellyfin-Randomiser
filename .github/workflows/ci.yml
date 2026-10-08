@@ -56,3 +56,100 @@ jobs:
         with:
           name: Jellyfin.Plugin.Randomizer-package
           path: Jellyfin.Plugin.Randomizer_*.zip
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open("Jellyfin.Plugin.Randomizer/meta.json"))["version"])')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Download verified package
+        uses: actions/download-artifact@v4
+        with:
+          name: Jellyfin.Plugin.Randomizer-package
+          path: release-package
+
+      - name: Verify package and record checksum
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          package="release-package/Jellyfin.Plugin.Randomizer_${version}.zip"
+          test -f "$package"
+          expected_entries=Jellyfin.Plugin.Randomizer.deps.json\nJellyfin.Plugin.Randomizer.dll\nJellyfin.Plugin.Randomizer.pdb\nmeta.json'
+          actual_entries="$(unzip -Z1 "$package" | sort)"
+          test "$actual_entries" = "$(printf '%s\n' "$expected_entries" | sort)"
+          ! unzip -Z1 "$package" | grep -Fxq 'Newtonsoft.Json.dll'
+          test "$(unzip -Z1 "$package" | grep -c '/')" -eq 0
+          md5="$(md5sum "$package" | cut -d ' ' -f1)"
+          sha256="$(sha256sum "$package" | cut -d ' ' -f1)"
+          size="$(stat -c '%s' "$package")"
+          echo "package=$package" >> "$GITHUB_OUTPUT"
+          echo "md5=$md5" >> "$GITHUB_OUTPUT"
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+          echo "size=$size" >> "$GITHUB_OUTPUT"
+          echo "Release package: $package"
+          echo "MD5: $md5"
+          echo "SHA256: $sha256"
+          echo "Size: $size"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          if gh release view "v${version}" >/dev/null 2>&1; then
+            echo "Release v${version} already exists; nothing to do."
+            exit 0
+          fi
+          gh release create "v${version}" \
+            "${{ steps.package.outputs.package }}" \
+            --title "Jellyfin Randomizer v${version}" \
+            --notes "Validated Jellyfin Server 10.10.7 release. Includes safe File Transformation Web integration and Jellyfin-Roulette-style Details navigation."
+
+      - name: Record release checksum in manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          md5="${{ steps.package.outputs.md5 }}"
+          python3 - "$version" "$md5" <<'PY'
+          import json
+          import sys
+          path = "manifest.json"
+          version = sys.argv[1]
+          checksum = sys.argv[2]
+          with open(path, encoding="utf-8") as f:
+              data = json.load(f)
+          entry = next(v for v in data[0]["versions"] if v["version"] == version)
+          entry["checksum"] = checksum
+          entry["sourceUrl"] = f"https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v{version}/Jellyfin.Plugin.Randomizer_{version}.zip"
+          with open(path, "w", encoding="utf-8") as f:
+              json.dump(data, f, indent=2)
+              f.write("\n")
+          PY
+
+          if git diff --quiet -- manifest.json; then
+            echo "Manifest already contains the release checksum."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git commit -m "Record release checksum for v${version}"
+          git push
