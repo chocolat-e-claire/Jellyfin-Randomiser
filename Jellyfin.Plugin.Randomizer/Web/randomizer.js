@@ -246,16 +246,27 @@
         const route = 'details?id=' + encodeURIComponent(itemId) +
             (serverId ? '&serverId=' + encodeURIComponent(serverId) : '');
 
-        if (window.Dashboard?.navigate) {
-            return Promise.resolve(window.Dashboard.navigate(route))
-                .then(() => {
-                    afterNavigation?.();
-                });
-        }
+        let attempts = 0;
+        const timer = window.setInterval(() => {
+            const navigate = window.Dashboard?.navigate;
+            if (typeof navigate === 'function') {
+                window.clearInterval(timer);
+                Promise.resolve(navigate.call(window.Dashboard, route))
+                    .then(() => {
+                        afterNavigation?.();
+                    })
+                    .catch(error => {
+                        console.error('Jellyfin Randomizer could not navigate to item details.', error);
+                    });
+                return;
+            }
 
-        location.hash = '#/' + route;
-        afterNavigation?.();
-        return Promise.resolve();
+            attempts += 1;
+            if (attempts >= 300) {
+                window.clearInterval(timer);
+                console.error('Jellyfin Randomizer requires the Jellyfin Web Dashboard navigation API.');
+            }
+        }, 100);
     }
 
     function nativePlayFromDetails(itemId) {
