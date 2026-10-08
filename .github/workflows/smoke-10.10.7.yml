@@ -1,0 +1,61 @@
+name: Jellyfin 10.10.7 plugin smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the exact v0.1.0.4 release asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL             -o plugin.zip             https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.4/Jellyfin.Plugin.Randomizer_0.1.0.4.zip
+          echo "58e0338db7b47c31394cbf89f0d041e9  plugin.zip" | md5sum -c -
+          rm -rf smoke-config
+          mkdir -p "smoke-config/plugins/Jellyfin Randomizer_0.1.0.4"
+          unzip -q plugin.zip -d "smoke-config/plugins/Jellyfin Randomizer_0.1.0.4"
+
+      - name: Start Jellyfin 10.10.7 with the plugin installed
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d             --name jellyfin-randomizer-smoke             -p 8096:8096             -v "$PWD/smoke-config:/config"             jellyfin/jellyfin:10.10.7
+
+      - name: Wait for Jellyfin health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..90}; do
+            if curl -fsS http://127.0.0.1:8096/health >/dev/null; then
+              echo "Jellyfin health check passed on attempt $i."
+              break
+            fi
+            if ! docker ps --filter name=jellyfin-randomizer-smoke --filter status=running -q | grep -q .; then
+              echo "Jellyfin container exited before becoming healthy."
+              docker logs jellyfin-randomizer-smoke || true
+              exit 1
+            fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8096/health >/dev/null
+
+      - name: Verify plugin loaded and server stayed healthy
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker ps --filter name=jellyfin-randomizer-smoke --filter status=running --format '{{.Names}}' | grep -Fx jellyfin-randomizer-smoke
+          docker logs jellyfin-randomizer-smoke 2>&1 | tee smoke.log
+          grep -F 'Jellyfin Randomizer' smoke.log
+          ! grep -Eiq 'Unhandled exception|fail:.*Jellyfin.Plugin.Randomizer|Application startup exception|host terminated unexpectedly' smoke.log
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f jellyfin-randomizer-smoke || true
