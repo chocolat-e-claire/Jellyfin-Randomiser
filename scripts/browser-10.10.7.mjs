@@ -202,10 +202,19 @@ try {
   console.log('PASS: home button opens full Randomizer and content type selector switches modes');
 
   console.log('== Jellyfin library integration ==');
-  const libraryFixture = await page.evaluate(async () => {
-    return await window.ApiClient.getJSON(window.ApiClient.getUrl('Library/VirtualFolders'), true);
+  const adminToken = await page.evaluate(async () => {
+    const auth = await fetch('/Users/AuthenticateByName', {
+      method: 'POST',
+      headers: {
+        Authorization: 'MediaBrowser Client="Jellyfin Randomizer Browser CI admin", DeviceId="jfr-browser-ci-admin", Device="Playwright", Version="10.10.7"',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ Username: 'ci-admin', Pw: 'ci-admin-password' })
+    });
+    if (!auth.ok) throw new Error('Admin authentication failed: HTTP ' + auth.status);
+    return (await auth.json()).AccessToken;
   });
-  const allowedLibrary = { ok: true, json: async () => libraryFixture };
+  const allowedLibrary = await fetch(new URL('/Library/VirtualFolders', baseUrl), { headers: { 'X-Emby-Token': adminToken } });
   if (!allowedLibrary.ok) {
     throw new Error(`Unable to read library folders: HTTP ${allowedLibrary.status}`);
   }
