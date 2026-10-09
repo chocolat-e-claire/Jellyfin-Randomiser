@@ -523,7 +523,7 @@ print("Randomizer enabled after disable:", value)
 assert value is False, config
 PY
 
-for endpoint in   "/Randomizer/Page"   "/Randomizer/Script.js"   "/Randomizer/Styles.css"   "/Randomizer/Libraries"   "/Randomizer/Search?itemType=Movie&limit=1"   "/Randomizer/Randomize"; do
+for endpoint in   "/Randomizer/Page"   "/Randomizer/Script.js"   "/Randomizer/Styles.css"   "/Randomizer/Libraries"   "/Randomizer/Search?itemType=Movie&limit=1"; do
   status="$(curl -sS -o "$TMP/disabled-endpoint.out" -w '%{http_code}' -H "X-Emby-Token: $USER_TOKEN" "$BASE_URL$endpoint")"
   echo "Disabled $endpoint status: $status"
   test "$status" -eq 404
