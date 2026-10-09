@@ -69,6 +69,26 @@ if (!me.Id) {
 }
 
 const browserInstance = await chromium.launch({ headless: true });
+
+// Exercise the injected plugin script on a genuinely clean, unauthenticated profile
+// before creating the authenticated profile used by the rest of this acceptance suite.
+const loginContext = await browserInstance.newContext({ baseURL: baseUrl });
+const loginPage = await loginContext.newPage();
+const unauthenticatedRandomizerRequests = [];
+loginPage.on('request', request => {
+  if (new URL(request.url()).pathname.startsWith('/Randomizer/')) {
+    unauthenticatedRandomizerRequests.push(request.url());
+  }
+});
+await loginPage.goto('/web/index.html', { waitUntil: 'domcontentloaded' });
+await loginPage.locator('input[type="password"]').first().waitFor({ state: 'visible', timeout: 60000 });
+await loginPage.waitForTimeout(1500);
+if (unauthenticatedRandomizerRequests.length > 0) {
+  throw new Error('Randomizer made requests before login: ' + unauthenticatedRandomizerRequests.join(', '));
+}
+console.log('PASS: unauthenticated login page is visible and Randomizer makes no API requests');
+await loginContext.close();
+
 const context = await browserInstance.newContext({
   baseURL: baseUrl
 });
