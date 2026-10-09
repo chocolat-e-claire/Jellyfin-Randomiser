@@ -501,4 +501,60 @@ echo "Inaccessible library scope status: $INACCESSIBLE_LIBRARY_STATUS"
 echo "== Normal Jellyfin details route =="
 user_get "/Users/$TEST_USER_ID/Items/$ALLOWED_MOVIE_ID" >/dev/null
 
+echo "== Disable Randomizer and verify complete shutdown =="
+CURRENT_CONFIG="$(admin_get '/Plugins/4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41/Configuration')"
+DISABLED_CONFIG="$(python3 - "$CURRENT_CONFIG" <<'PY'
+import json
+import sys
+config = json.loads(sys.argv[1])
+config["Enabled"] = False
+print(json.dumps(config, separators=(",", ":")))
+PY
+)"
+admin_post "/Plugins/4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41/Configuration" "$DISABLED_CONFIG" >/dev/null
+
+DISABLED_CONFIG_READBACK="$(admin_get '/Plugins/4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41/Configuration')"
+export DISABLED_CONFIG_READBACK
+python3 - <<'PY'
+import json, os
+config = json.loads(os.environ["DISABLED_CONFIG_READBACK"])
+value = config.get("Enabled", config.get("enabled"))
+print("Randomizer enabled after disable:", value)
+assert value is False, config
+PY
+
+for endpoint in   "/Randomizer/Page"   "/Randomizer/Script.js"   "/Randomizer/Styles.css"   "/Randomizer/Libraries"   "/Randomizer/Search?itemType=Movie&limit=1"   "/Randomizer/Randomize"; do
+  status="$(curl -sS -o "$TMP/disabled-endpoint.out" -w '%{http_code}' -H "X-Emby-Token: $USER_TOKEN" "$BASE_URL$endpoint")"
+  echo "Disabled $endpoint status: $status"
+  test "$status" -eq 404
+done
+
+DISABLED_WEB="$(curl -fsS -H "X-Emby-Token: $USER_TOKEN" "$BASE_URL/web/index.html")"
+if printf '%s' "$DISABLED_WEB" | grep -Fq 'data-jellyfin-randomizer-loader'; then
+  echo "Randomizer Web loader remained while disabled."
+  exit 1
+fi
+
+echo "== Re-enable Randomizer and verify restoration =="
+REENABLED_CONFIG="$(python3 - "$DISABLED_CONFIG_READBACK" <<'PY'
+import json
+import sys
+config = json.loads(sys.argv[1])
+config["Enabled"] = True
+print(json.dumps(config, separators=(",", ":")))
+PY
+)"
+admin_post "/Plugins/4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41/Configuration" "$REENABLED_CONFIG" >/dev/null
+
+REENABLED_PAGE_STATUS="$(curl -sS -o "$TMP/reenabled-page.out" -w '%{http_code}' -H "X-Emby-Token: $USER_TOKEN" "$BASE_URL/Randomizer/Page")"
+test "$REENABLED_PAGE_STATUS" -eq 200
+
+REENABLED_LIBS_STATUS="$(curl -sS -o "$TMP/reenabled-libs.out" -w '%{http_code}' -H "X-Emby-Token: $USER_TOKEN" "$BASE_URL/Randomizer/Libraries")"
+test "$REENABLED_LIBS_STATUS" -eq 200
+
+REENABLED_WEB="$(curl -fsS -H "X-Emby-Token: $USER_TOKEN" "$BASE_URL/web/index.html")"
+loader_count="$(printf '%s' "$REENABLED_WEB" | grep -o 'data-jellyfin-randomizer-loader' | wc -l)"
+echo "Re-enabled Randomizer loader tag count: $loader_count"
+test "$loader_count" -eq 2
+
 echo "== Acceptance passed =="
