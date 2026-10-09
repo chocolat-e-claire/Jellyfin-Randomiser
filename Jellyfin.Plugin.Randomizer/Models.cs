@@ -36,6 +36,11 @@ public sealed record LibraryDto(
     [property: JsonPropertyName("id")] Guid Id,
     [property: JsonPropertyName("name")] string Name);
 
+public sealed record RandomizerSearchResult(
+    [property: JsonPropertyName("items")] IReadOnlyList<LibraryDto> Items,
+    [property: JsonPropertyName("totalCount")] int TotalCount,
+    [property: JsonPropertyName("hasMore")] bool HasMore);
+
 public sealed class RandomizeResult
 {
     [JsonPropertyName("itemId")]

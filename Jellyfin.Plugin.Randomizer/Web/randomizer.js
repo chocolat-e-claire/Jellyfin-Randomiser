@@ -109,13 +109,20 @@
         const dialog = document.createElement('div');
         dialog.id = 'jfr';
         dialog.className = 'jfr-backdrop';
+        dialog.__jfrSelectedIds = new Set();
+        dialog.__jfrStartIndex = 0;
+        dialog.__jfrSearchToken = 0;
+
         dialog.innerHTML = '<div class="jfr-modal" role="dialog" aria-modal="true" aria-labelledby="jfr-title">' +
             '<div class="jfr-head"><h2 id="jfr-title">🎲 Randomize ' +
             (type === 'Movie' ? 'Movies' : 'TV Shows') +
             '</h2><button class="jfr-close" aria-label="Close">×</button></div>' +
             '<select id="jfr-lib" aria-label="Library"></select>' +
-            '<input id="jfr-q" class="jfr-search" placeholder="Search titles" aria-label="Search titles">' +
+            '<select id="jfr-genre" aria-label="Genre"><option value="">All genres</option></select>' +
+            '<input id="jfr-q" class="jfr-search" placeholder="Search all accessible titles" aria-label="Search titles">' +
+            '<div id="jfr-results-meta" class="jfr-results-meta"></div>' +
             '<div id="jfr-results" class="jfr-results"></div>' +
+            '<div id="jfr-more" class="jfr-more-wrap"></div>' +
             '<div class="jfr-controls">' +
             (type === 'Series'
                 ? '<label><input type="radio" name="jfr-mode" value="RandomShow" checked> Random Show</label>' +
@@ -160,12 +167,17 @@
         history.value = String(C.HistorySize || 0);
 
         dialog.querySelector('#jfr-q').addEventListener('input', () => {
-            clearTimeout(window.__jfrSearchTimer);
-            window.__jfrSearchTimer = setTimeout(() => search(dialog), 250);
+            clearTimeout(dialog.__jfrSearchTimer);
+            dialog.__jfrSearchTimer = setTimeout(() => resetSearch(dialog), 250);
         });
 
-        dialog.querySelector('#jfr-lib').addEventListener('change', () => search(dialog));
-        dialog.querySelector('[name="jfr-mode"]')?.addEventListener('change', () => search(dialog));
+        dialog.querySelector('#jfr-lib').addEventListener('change', async () => {
+            await loadGenres(dialog);
+            resetSearch(dialog);
+        });
+
+        dialog.querySelector('#jfr-genre').addEventListener('change', () => resetSearch(dialog));
+        dialog.querySelector('[name="jfr-mode"]')?.addEventListener('change', () => resetSearch(dialog));
         dialog.querySelector('.jfr-go').addEventListener('click', () => randomize(dialog));
 
         loadLibraries(dialog);
@@ -178,17 +190,91 @@
             const libraries = await getJson('/Randomizer/Libraries');
             select.innerHTML = '<option value="">Entire accessible library</option>' +
                 libraries.map(x => '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>').join('');
-            await search(dialog);
+            await loadGenres(dialog);
+            resetSearch(dialog);
         } catch (error) {
             console.error('Jellyfin Randomizer libraries failed', error);
             dialog.querySelector('#jfr-results').textContent = 'Unable to load accessible libraries.';
         }
     }
 
-    async function search(dialog) {
+    async function loadGenres(dialog) {
+        const select = dialog.querySelector('#jfr-genre');
+        const libraryId = dialog.querySelector('#jfr-lib').value;
+        const query = new URLSearchParams({ itemType: type });
+
+        if (libraryId) {
+            query.set('libraryId', libraryId);
+        }
+
+        select.disabled = true;
+        try {
+            const genres = await getJson('/Randomizer/Genres?' + query);
+            select.innerHTML = '<option value="">All genres</option>' +
+                genres.map(x => '<option value="' + esc(x) + '">' + esc(x) + '</option>').join('');
+        } catch (error) {
+            console.error('Jellyfin Randomizer genres failed', error);
+            select.innerHTML = '<option value="">All genres</option>';
+        } finally {
+            select.disabled = false;
+        }
+    }
+
+    function resetSearch(dialog) {
+        dialog.__jfrStartIndex = 0;
+        dialog.__jfrSelectedIds.clear();
+        search(dialog, false);
+    }
+
+    function renderResults(dialog, items, append, totalCount, hasMore) {
+        const results = dialog.querySelector('#jfr-results');
+        const selectedIds = dialog.__jfrSelectedIds;
+
+        const html = items.map(x =>
+            '<label><input type="checkbox" value="' + esc(x.id) + '"' +
+            (selectedIds.has(String(x.id)) ? ' checked' : '') +
+            '> ' + esc(x.name) + '</label>'
+        ).join('');
+
+        if (append) {
+            results.insertAdjacentHTML('beforeend', html);
+        } else {
+            results.innerHTML = html || '<span>No matching titles.</span>';
+        }
+
+        results.querySelectorAll('input[type="checkbox"]').forEach(input => {
+            input.addEventListener('change', () => {
+                const id = String(input.value);
+                if (input.checked) {
+                    selectedIds.add(id);
+                } else {
+                    selectedIds.delete(id);
+                }
+            });
+        });
+
+        const shown = results.querySelectorAll('input[type="checkbox"]').length;
+        dialog.querySelector('#jfr-results-meta').textContent =
+            totalCount > 0 ? 'Showing ' + shown + ' of ' + totalCount : '';
+
+        const more = dialog.querySelector('#jfr-more');
+        if (hasMore) {
+            more.innerHTML = '<button type="button" class="jfr-load-more">Load more</button>';
+            more.querySelector('.jfr-load-more').addEventListener('click', () => {
+                search(dialog, true);
+            });
+        } else {
+            more.innerHTML = '';
+        }
+    }
+
+    async function search(dialog, append) {
+        const token = ++dialog.__jfrSearchToken;
         const query = new URLSearchParams({
             itemType: type,
             search: dialog.querySelector('#jfr-q').value || '',
+            genre: dialog.querySelector('#jfr-genre').value || '',
+            startIndex: String(dialog.__jfrStartIndex),
             limit: '100'
         });
 
@@ -197,21 +283,41 @@
             query.set('libraryId', libraryId);
         }
 
+        const moreButton = dialog.querySelector('.jfr-load-more');
+        if (append && moreButton) {
+            moreButton.disabled = true;
+            moreButton.textContent = 'Loading…';
+        }
+
         try {
             const data = await getJson('/Randomizer/Search?' + query);
-            dialog.querySelector('#jfr-results').innerHTML =
-                data.map(x => '<label><input type="checkbox" value="' + esc(x.id) + '"> ' +
-                    esc(x.name) + '</label>').join('') || '<span>No matching titles.</span>';
+
+            if (token !== dialog.__jfrSearchToken) {
+                return;
+            }
+
+            if (append) {
+                dialog.__jfrStartIndex += data.items.length;
+            } else {
+                dialog.__jfrStartIndex = data.items.length;
+            }
+
+            renderResults(dialog, data.items || [], append, data.totalCount || 0, data.hasMore === true);
         } catch (error) {
             console.error('Jellyfin Randomizer search failed', error);
-            dialog.querySelector('#jfr-results').textContent = 'Search failed.';
+
+            if (!append) {
+                dialog.querySelector('#jfr-results').textContent = 'Search failed.';
+            } else if (moreButton) {
+                moreButton.disabled = false;
+                moreButton.textContent = 'Load more';
+            }
         }
     }
 
     async function randomize(dialog) {
         const button = dialog.querySelector('.jfr-go');
-        const ids = [...dialog.querySelectorAll('#jfr-results input[type="checkbox"]:checked')]
-            .map(input => input.value);
+        const ids = [...dialog.__jfrSelectedIds];
 
         const mode = dialog.querySelector('[name="jfr-mode"]:checked')?.value ||
             (type === 'Series' ? 'RandomShow' : 'RandomMovie');
