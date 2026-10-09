@@ -194,8 +194,23 @@ try {
   if (await page.locator('#jfr-strategy').count() !== 0) {
     throw new Error('TV-specific controls remained after switching back to Movies.');
   }
-  await page.locator('#jfr-close').click();
+  await page.locator('.jfr-close').click();
   console.log('PASS: home button opens full Randomizer and content type selector switches modes');
+
+  console.log('== Jellyfin library integration ==');
+  const allowedLibrary = await fetch(new URL('/Library/VirtualFolders', baseUrl), { headers: { 'X-Emby-Token': token } });
+  if (!allowedLibrary.ok) {
+    throw new Error(`Unable to read library folders: HTTP ${allowedLibrary.status}`);
+  }
+  const folders = await allowedLibrary.json();
+  const movieLibrary = folders.find(folder => /Allowed Movies/i.test(folder.Name));
+  if (!movieLibrary?.ItemId) {
+    throw new Error('Could not resolve the synthetic movie library for library-page button acceptance.');
+  }
+  await page.goto('/web/index.html#!/movies.html?topParentId=' + encodeURIComponent(movieLibrary.ItemId), { waitUntil: 'domcontentloaded' });
+  await waitFor(page.locator('#moviesPage'), 'library-scoped Movies page loads');
+  await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button on a library page');
+  console.log('PASS: Randomize button is available inside a library-scoped page');
 
   console.log('== Jellyfin Movies integration ==');
   await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
