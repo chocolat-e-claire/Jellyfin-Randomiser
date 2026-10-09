@@ -550,7 +550,7 @@ export DISABLED_MANIFEST
 manifest_status="$(python3 - <<'PY'
 import json, os
 manifest = json.loads(os.environ["DISABLED_MANIFEST"])
-print("Plugin manifest:", manifest)
+print("Plugin manifest:", manifest, file=__import__("sys").stderr)
 print(manifest.get("status"))
 PY
 )"
