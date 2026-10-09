@@ -39,10 +39,41 @@ mkdir -p "$ROOT/allowed-shows/Test Show B/Season 01"
 
 make_video "$ROOT/allowed-movies/Allowed Movie 1/Allowed Movie 1.mp4" blue
 make_video "$ROOT/allowed-movies/Allowed Movie 2/Allowed Movie 2.mp4" cyan
+cat > "$ROOT/allowed-movies/Allowed Movie 1/Allowed Movie 1.nfo" <<'EOF'
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<movie>
+  <title>Allowed Movie 1</title>
+  <genre>Comedy</genre>
+</movie>
+EOF
+cat > "$ROOT/allowed-movies/Allowed Movie 2/Allowed Movie 2.nfo" <<'EOF'
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<movie>
+  <title>Allowed Movie 2</title>
+  <genre>Comedy</genre>
+  <genre>Drama</genre>
+</movie>
+EOF
 make_video "$ROOT/blocked-movies/Blocked Movie 1/Blocked Movie 1.mp4" red
 make_video "$ROOT/allowed-shows/Test Show A/Season 01/Test Show A - S01E01.mp4" green
 make_video "$ROOT/allowed-shows/Test Show A/Season 01/Test Show A - S01E02.mp4" yellow
 make_video "$ROOT/allowed-shows/Test Show B/Season 01/Test Show B - S01E01.mp4" purple
 make_video "$ROOT/allowed-shows/Test Show B/Season 01/Test Show B - S01E02.mp4" orange
+
+cat > "$ROOT/allowed-shows/Test Show A/tvshow.nfo" <<'EOF'
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<tvshow>
+  <title>Test Show A</title>
+  <genre>Comedy</genre>
+</tvshow>
+EOF
+cat > "$ROOT/allowed-shows/Test Show B/tvshow.nfo" <<'EOF'
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<tvshow>
+  <title>Test Show B</title>
+  <genre>Comedy</genre>
+  <genre>Drama</genre>
+</tvshow>
+EOF
 
 find "$ROOT" -type f -name '*.mp4' -print | sort
