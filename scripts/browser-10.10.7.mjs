@@ -144,6 +144,11 @@ try {
   await waitFor(standalonePage.locator('#genre'), 'standalone genre selector');
   await waitFor(standalonePage.locator('#search'), 'standalone search box');
   await waitFor(standalonePage.locator('#randomize'), 'standalone randomize button');
+  const scrollbarGutter = await standalonePage.evaluate(() => getComputedStyle(document.documentElement).scrollbarGutter);
+  if (scrollbarGutter !== 'stable') {
+    throw new Error(`Standalone results page scrollbar gutter is not stable: ${scrollbarGutter}`);
+  }
+  console.log('PASS: standalone results page reserves a stable scrollbar gutter');
   const standaloneLibraries = await standalonePage.locator('#library option').allTextContents();
   if (!standaloneLibraries.includes('Allowed Movies')) {
     throw new Error(`Standalone page did not expose the restricted library: ${standaloneLibraries.join(', ')}`);
