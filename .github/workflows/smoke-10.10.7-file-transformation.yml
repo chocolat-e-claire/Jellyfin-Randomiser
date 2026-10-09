@@ -109,6 +109,13 @@ jobs:
 
           [ "$injected" = true ]
 
+          index_html="$(curl -fsS http://127.0.0.1:8096/web/index.html)"
+          grep -Fq "Styles.css?v=$VERSION" <<< "$index_html"
+          grep -Fq "Script.js?v=$VERSION" <<< "$index_html"
+          curl -fsS "http://127.0.0.1:8096/Randomizer/Styles.css?v=$VERSION" | grep -Fq 'jfr-backdrop'
+          curl -fsS "http://127.0.0.1:8096/Randomizer/Script.js?v=$VERSION" | grep -Fq 'JellyfinRandomizer'
+          echo "Versioned CSS/JS cache-busting URLs verified for v$VERSION."
+
           docker exec jellyfin-randomizer-acceptance \
             sh -c 'find /jellyfin -type f -print0 | sort -z | xargs -0 sha256sum' \
             > jellyfin-with-randomizer.sha256
