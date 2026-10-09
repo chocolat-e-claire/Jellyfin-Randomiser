@@ -127,7 +127,11 @@ public sealed class RandomizerService
 
         var query = Query(u, kind, lid, WatchedFilter.All);
         query.SearchTerm = string.IsNullOrWhiteSpace(term) ? null : term.Trim();
-        query.Genres = string.IsNullOrWhiteSpace(genre) ? null : new[] { genre.Trim() };
+        if (!string.IsNullOrWhiteSpace(genre))
+        {
+            query.Genres = new[] { genre.Trim() };
+        }
+
         query.Limit = limit > 0 ? Math.Clamp(limit, 1, 5000) : null;
         query.EnableTotalRecordCount = false;
 
@@ -321,9 +325,13 @@ public sealed class RandomizerService
                 WatchedFilter.Watched => true,
                 WatchedFilter.Unwatched => false,
                 _ => null
-            },
-            Genres = string.IsNullOrWhiteSpace(genre) ? null : new[] { genre.Trim() }
+            }
         };
+
+        if (!string.IsNullOrWhiteSpace(genre))
+        {
+            query.Genres = new[] { genre.Trim() };
+        }
 
         if (lid.HasValue)
         {
