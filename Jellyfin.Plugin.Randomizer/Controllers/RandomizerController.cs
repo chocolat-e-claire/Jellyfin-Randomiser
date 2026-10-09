@@ -15,11 +15,16 @@ public sealed class RandomizerController : ControllerBase
     private const string PageResource = "Jellyfin.Plugin.Randomizer.Configuration.randomizerPage.html";
     private readonly IUserManager users;
     private readonly RandomizerService service;
+    private readonly RandomizerRuntimeState runtimeState;
 
-    public RandomizerController(IUserManager u, RandomizerService s)
+    public RandomizerController(
+        IUserManager u,
+        RandomizerService s,
+        RandomizerRuntimeState state)
     {
         users = u;
         service = s;
+        runtimeState = state;
     }
 
     [HttpGet("Page")]
@@ -138,8 +143,7 @@ public sealed class RandomizerController : ControllerBase
             : Unauthorized();
     }
 
-    private static bool IsEnabled() =>
-        Plugin.Instance?.Configuration.Enabled != false;
+    private bool IsEnabled() => runtimeState.IsEnabled;
 
     private User? Current()
     {
