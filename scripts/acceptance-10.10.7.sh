@@ -506,9 +506,9 @@ PLUGIN_ID="4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41"
 INSTALLED_PLUGINS="$(admin_get '/Plugins')"
 export INSTALLED_PLUGINS PLUGIN_ID VERSION
 PLUGIN_VERSION="$(python3 - <<'PY'
-import json, os
+import json, os, sys
 plugins = json.loads(os.environ["INSTALLED_PLUGINS"])
-print("Installed plugins:", [(p.get("Name"), p.get("Id"), p.get("Version")) for p in plugins], file=__import__("sys").stderr)
+print("Installed plugins:", [(p.get("Name"), p.get("Id"), p.get("Version"), p.get("Status")) for p in plugins], file=sys.stderr)
 plugin_id = os.environ["PLUGIN_ID"].lower()
 plugin = next(p for p in plugins if str(p.get("Name", "")).lower() == "jellyfin randomizer")
 actual_id = str(plugin.get("Id", "")).replace("-", "").lower()
@@ -521,17 +521,122 @@ PY
 )"
 echo "Jellyfin reports Randomizer version: $PLUGIN_VERSION"
 
+echo "== Disable Randomizer via Jellyfin plugin manager =="
 disable_status="$(curl -sS -o "$TMP/plugin-disable.out" -w '%{http_code}' -X POST \
   -H "X-Emby-Token: $ADMIN_TOKEN" \
   "$BASE_URL/Plugins/$PLUGIN_ID/$PLUGIN_VERSION/Disable")"
 echo "Plugin-manager Disable status: $disable_status"
 test "$disable_status" -eq 204
 
+DISABLED_PLUGINS="$(admin_get '/Plugins')"
+export DISABLED_PLUGINS PLUGIN_ID
+python3 - <<'PY'
+import json, os
+plugins = json.loads(os.environ["DISABLED_PLUGINS"])
+plugin_id = os.environ["PLUGIN_ID"].replace("-", "").lower()
+plugin = next(p for p in plugins if str(p.get("Name", "")).lower() == "jellyfin randomizer")
+status = plugin.get("Status")
+print("Randomizer in-memory status after disable:", status)
+actual_id = str(plugin.get("Id", "")).replace("-", "").lower()
+assert actual_id == plugin_id, plugin
+# Jellyfin 10.10.7 reports Restart (1) after writing Disabled to disk.
+assert status in (1, "Restart", "restart"), plugin
+PY
+
+echo "== Verify Disabled status persisted to meta.json =="
+PLUGIN_MANIFEST_PATH="/config/plugins/Jellyfin Randomizer_$PLUGIN_VERSION/meta.json"
+manifest_status="$(docker exec jellyfin-randomizer-acceptance python3 - "$PLUGIN_MANIFEST_PATH" <<'PY'
+import json
+import sys
+manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+print("Plugin manifest:", manifest)
+print(manifest.get("status"))
+PY
+)"
+echo "Disk manifest status after disable: $manifest_status"
+test "$manifest_status" = "-1"
+
+echo "== Restart Jellyfin and verify plugin stays disabled =="
+docker restart jellyfin-randomizer-acceptance >/dev/null
+wait_for_health
+ADMIN_TOKEN="$(authenticate "$ADMIN_USER" "$ADMIN_PASS")"
+
+POST_RESTART_PLUGINS="$(admin_get '/Plugins')"
+export POST_RESTART_PLUGINS PLUGIN_ID
+python3 - <<'PY'
+import json, os
+plugins = json.loads(os.environ["POST_RESTART_PLUGINS"])
+plugin_id = os.environ["PLUGIN_ID"].replace("-", "").lower()
+plugin = next(p for p in plugins if str(p.get("Name", "")).lower() == "jellyfin randomizer")
+status = plugin.get("Status")
+print("Randomizer status after restart:", status)
+assert str(plugin.get("Id", "")).replace("-", "").lower() == plugin_id, plugin
+assert status in (-1, "Disabled", "disabled"), plugin
+PY
+
+if docker logs jellyfin-randomizer-acceptance 2>&1 | grep -Fq 'Loaded plugin: "Jellyfin Randomizer"'; then
+  echo "Jellyfin Randomizer was loaded after restart even though its manifest was Disabled."
+  exit 1
+fi
+
+if curl -fsS -H "X-Emby-Token: $ADMIN_TOKEN" "$BASE_URL/web/index.html" | grep -Fq 'data-jellyfin-randomizer-loader'; then
+  echo "Randomizer Web loader remained after plugin-manager disable and restart."
+  exit 1
+fi
+
+echo "== Re-enable Randomizer via Jellyfin plugin manager =="
 enable_status="$(curl -sS -o "$TMP/plugin-enable.out" -w '%{http_code}' -X POST \
   -H "X-Emby-Token: $ADMIN_TOKEN" \
   "$BASE_URL/Plugins/$PLUGIN_ID/$PLUGIN_VERSION/Enable")"
 echo "Plugin-manager Enable status: $enable_status"
 test "$enable_status" -eq 204
+
+ENABLED_PLUGINS="$(admin_get '/Plugins')"
+export ENABLED_PLUGINS PLUGIN_ID
+python3 - <<'PY'
+import json, os
+plugins = json.loads(os.environ["ENABLED_PLUGINS"])
+plugin_id = os.environ["PLUGIN_ID"].replace("-", "").lower()
+plugin = next(p for p in plugins if str(p.get("Name", "")).lower() == "jellyfin randomizer")
+status = plugin.get("Status")
+print("Randomizer in-memory status after enable:", status)
+assert str(plugin.get("Id", "")).replace("-", "").lower() == plugin_id, plugin
+assert status in (1, "Restart", "restart"), plugin
+PY
+
+enabled_manifest_status="$(docker exec jellyfin-randomizer-acceptance python3 - "$PLUGIN_MANIFEST_PATH" <<'PY'
+import json
+import sys
+manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+print("Plugin manifest:", manifest)
+print(manifest.get("status"))
+PY
+)"
+echo "Disk manifest status after enable: $enabled_manifest_status"
+test "$enabled_manifest_status" = "0"
+
+echo "== Restart Jellyfin and verify plugin loads again =="
+docker restart jellyfin-randomizer-acceptance >/dev/null
+wait_for_health
+ADMIN_TOKEN="$(authenticate "$ADMIN_USER" "$ADMIN_PASS")"
+
+FINAL_PLUGINS="$(admin_get '/Plugins')"
+export FINAL_PLUGINS PLUGIN_ID
+python3 - <<'PY'
+import json, os
+plugins = json.loads(os.environ["FINAL_PLUGINS"])
+plugin_id = os.environ["PLUGIN_ID"].replace("-", "").lower()
+plugin = next(p for p in plugins if str(p.get("Name", "")).lower() == "jellyfin randomizer")
+status = plugin.get("Status")
+print("Randomizer status after re-enable + restart:", status)
+assert str(plugin.get("Id", "")).replace("-", "").lower() == plugin_id, plugin
+assert status in (0, "Active", "active"), plugin
+PY
+
+if ! docker logs jellyfin-randomizer-acceptance 2>&1 | grep -Fq 'Loaded plugin: "Jellyfin Randomizer"'; then
+  echo "Jellyfin Randomizer did not load after being re-enabled and restarted."
+  exit 1
+fi
 
 echo "== Disable Randomizer and verify complete shutdown =="
 CURRENT_CONFIG="$(admin_get '/Plugins/4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41/Configuration')"
