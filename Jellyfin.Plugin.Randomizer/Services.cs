@@ -138,6 +138,7 @@ public sealed class RandomizerService
 
         return lib.GetItemList(query)
             .Select(x => new LibraryDto(x.Id, x.Name))
+            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
