@@ -154,16 +154,29 @@ jobs:
           path = "manifest.json"
           version = sys.argv[1]
           checksum = sys.argv[2]
+          source_url = f"https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v{version}/Jellyfin.Plugin.Randomizer_{version}.zip"
           with open(path, encoding="utf-8") as f:
               data = json.load(f)
-          entry = next(v for v in data[0]["versions"] if v["version"] == version)
+          versions = data[0]["versions"]
+          entry = next((v for v in versions if v["version"] == version), None)
+          if entry is None:
+              with open("Jellyfin.Plugin.Randomizer/meta.json", encoding="utf-8") as f:
+                  meta = json.load(f)
+              entry = {
+                  "version": version,
+                  "changelog": "See the GitHub release notes for this version.",
+                  "targetAbi": meta["targetAbi"],
+                  "sourceUrl": source_url,
+                  "checksum": checksum,
+                  "timestamp": None
+              }
+              versions.insert(0, entry)
           entry["checksum"] = checksum
-          entry["sourceUrl"] = f"https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v{version}/Jellyfin.Plugin.Randomizer_{version}.zip"
+          entry["sourceUrl"] = source_url
           with open(path, "w", encoding="utf-8") as f:
               json.dump(data, f, indent=2)
-              f.write("\n")
+              f.write("\\n")
           PY
-
           if git diff --quiet -- manifest.json; then
             echo "Manifest already contains the published release checksum."
             exit 0
