@@ -71,7 +71,7 @@
             return page.querySelector('#seriesTab .focuscontainer-x');
         }
 
-        if (page.id === 'homePage') {
+        if (page.classList.contains('homePage')) {
             return page.querySelector('.homeSectionsContainer');
         }
 
@@ -81,7 +81,7 @@
     function addButton() {
         const page = activePage();
         const routeType = pageType();
-        const isHome = page?.id === 'homePage';
+        const isHome = page?.classList.contains('homePage') === true;
 
         if (routeType !== null) {
             type = routeType;
