@@ -13,6 +13,8 @@ public sealed class PluginServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<IRandomSource, SystemRandomSource>();
         services.AddSingleton<RandomHistoryService>();
         services.AddSingleton<RandomizerService>();
+        services.AddSingleton<RandomizerRuntimeState>();
+        services.AddHostedService(sp => sp.GetRequiredService<RandomizerRuntimeState>());
         services.AddSingleton<IScheduledTask, RandomizerStartupService>();
     }
 }
