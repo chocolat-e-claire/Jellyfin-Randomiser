@@ -10,6 +10,10 @@ public sealed class PluginServiceRegistrator : IPluginServiceRegistrator
 {
     public void RegisterServices(IServiceCollection services, IServerApplicationHost applicationHost)
     {
+        services.AddSingleton<RandomizerRuntimeState>();
+        services.AddSingleton<RandomizerWebIntegration>();
+        services.AddHostedService<RandomizerPluginStateMonitor>();
+
         services.AddSingleton<IRandomSource, SystemRandomSource>();
         services.AddSingleton<RandomHistoryService>();
         services.AddSingleton<RandomizerService>();
