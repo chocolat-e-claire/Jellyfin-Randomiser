@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "0.1.0.9",
+        "changelog": "Fix Jellyfin plugin Disable/Enable version mismatch.",
+        "targetAbi": "10.10.7.0",
+        "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.9/Jellyfin.Plugin.Randomizer_0.1.0.9.zip",
+        "checksum": "",
+        "timestamp": "2026-10-09T00:00:00Z"
+      },
+      {
         "version": "0.1.0.8",
         "changelog": "Make Enable Randomizer a complete runtime disable switch.",
         "targetAbi": "10.10.7.0",
