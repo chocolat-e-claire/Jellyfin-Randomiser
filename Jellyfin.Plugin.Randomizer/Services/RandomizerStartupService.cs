@@ -25,13 +25,6 @@ public sealed class RandomizerStartupService : IScheduledTask
         logger.LogInformation("Randomizer startup service executing.");
         await Task.Yield();
 
-        if (Plugin.Instance?.IsRuntimeEnabled != true)
-        {
-            logger.LogInformation(
-                "Randomizer startup service is inactive; Web integration was not registered.");
-            return;
-        }
-
         try
         {
             var fileTransformationAssembly =
