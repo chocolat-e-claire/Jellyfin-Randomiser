@@ -349,7 +349,13 @@
         // File Transformation injects this script into index.html, including the
         // unauthenticated login route. Do not initialize plugin APIs, observers, or
         // polling until Jellyfin Web has an authenticated user session.
-        if (typeof API.getCurrentUserId !== 'function' || !API.getCurrentUserId()) {
+        // ApiClient can exist on the login route before a user session does.
+        // Treat errors while Jellyfin Web is still bootstrapping as unauthenticated.
+        try {
+            if (typeof API.getCurrentUserId !== 'function' || !API.getCurrentUserId()) {
+                return false;
+            }
+        } catch {
             return false;
         }
 
