@@ -263,14 +263,18 @@ print("Search result:", name)
 assert name == "Allowed Movie 1", items
 PY
 
-echo "== Verify search hard cap =="
-SEARCH_CAPPED="$(user_get '/Randomizer/Search?itemType=Movie&limit=1000')"
-export SEARCH_CAPPED
+echo "== Verify search returns all titles in alphabetical order =="
+SEARCH_ALL="$(user_get '/Randomizer/Search?itemType=Movie')"
+export SEARCH_ALL
 python3 - <<'PY'
 import json, os
-items = json.loads(os.environ["SEARCH_CAPPED"])
-print("Search limit=1000 returned:", len(items), "items")
-assert len(items) <= 100, items
+items = json.loads(os.environ["SEARCH_ALL"])
+names = [x.get("name", x.get("Name")) for x in items]
+print("Search returned:", len(names), "items")
+print("First titles:", names[:5])
+assert len(names) > 100, len(names)
+assert names == sorted(names, key=str.casefold), names[:20]
+assert "Allowed Movie 105" in names, names[-20:]
 PY
 
 
