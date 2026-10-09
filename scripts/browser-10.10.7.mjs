@@ -100,7 +100,7 @@ await context.addInitScript(({ serverId, baseUrl, token, me }) => {
 
 const page = await context.newPage();
 page.on('response', async response => {
-  if (response.url().includes('/Randomizer/Genres')) {
+  if (/\/Randomizer\/(Genres|Libraries|Search)/.test(response.url())) {
     try {
       console.log('GENRE RESPONSE ' + response.status() + ' ' + response.url() + ' body=' + (await response.text()).slice(0, 1200));
     } catch (error) {
