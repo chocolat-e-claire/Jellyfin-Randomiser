@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Jellyfin.Data.Entities;
 using Jellyfin.Plugin.Randomizer.Services;
+using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
