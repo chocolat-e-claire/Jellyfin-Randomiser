@@ -45,4 +45,32 @@ make_video "$ROOT/allowed-shows/Test Show A/Season 01/Test Show A - S01E02.mp4" 
 make_video "$ROOT/allowed-shows/Test Show B/Season 01/Test Show B - S01E01.mp4" purple
 make_video "$ROOT/allowed-shows/Test Show B/Season 01/Test Show B - S01E02.mp4" orange
 
-find "$ROOT" -type f -name '*.mp4' -print | sort
+cat > "$ROOT/allowed-movies/Allowed Movie 1/Allowed Movie 1.nfo" <<'EOF'
+<movie>
+  <title>Allowed Movie 1</title>
+  <genre>Action</genre>
+</movie>
+EOF
+
+cat > "$ROOT/allowed-movies/Allowed Movie 2/Allowed Movie 2.nfo" <<'EOF'
+<movie>
+  <title>Allowed Movie 2</title>
+  <genre>Comedy</genre>
+</movie>
+EOF
+
+cat > "$ROOT/allowed-shows/Test Show A/Test Show A.nfo" <<'EOF'
+<tvshow>
+  <title>Test Show A</title>
+  <genre>Drama</genre>
+</tvshow>
+EOF
+
+cat > "$ROOT/allowed-shows/Test Show B/Test Show B.nfo" <<'EOF'
+<tvshow>
+  <title>Test Show B</title>
+  <genre>Comedy</genre>
+</tvshow>
+EOF
+
+find "$ROOT" -type f -print | sort

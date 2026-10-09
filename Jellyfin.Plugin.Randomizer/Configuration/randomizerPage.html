@@ -43,6 +43,12 @@
                     <option value="Series">TV Shows</option>
                 </select>
             </div>
+            <div class="field">
+                <label for="genre">Genre</label>
+                <select id="genre">
+                    <option value="">All genres</option>
+                </select>
+            </div>
         </div>
 
         <div class="field" style="margin-top:12px">
@@ -143,14 +149,28 @@
             libraries.map(x => '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>').join('');
     }
 
+    async function loadGenres() {
+        const query = new URLSearchParams({itemType: $('type').value});
+        if (libraryId()) query.set('libraryId', libraryId());
+
+        const genres = await api('/Randomizer/Genres?' + query.toString());
+        const select = $('genre');
+        const current = select.value;
+        select.innerHTML = '<option value="">All genres</option>' +
+            genres.map(x => '<option value="' + esc(x.name) + '">' + esc(x.name) + '</option>').join('');
+
+        if (genres.some(x => String(x.name).toLowerCase() === String(current).toLowerCase())) {
+            select.value = current;
+        }
+    }
+
     async function loadTitles() {
-        const type = $('type').value;
         const query = new URLSearchParams({
-            itemType: type,
-            search: $('search').value,
-            limit: '100'
+            itemType: $('type').value,
+            search: $('search').value
         });
         if (libraryId()) query.set('libraryId', libraryId());
+        if ($('genre').value) query.set('genre', $('genre').value);
 
         const data = await api('/Randomizer/Search?' + query.toString());
         $('results').innerHTML = data.length
@@ -211,10 +231,16 @@
     $('type').addEventListener('change', async () => {
         updateControls();
         showMessage('');
+        await loadGenres();
         await loadTitles();
     });
 
-    $('library').addEventListener('change', loadTitles);
+    $('library').addEventListener('change', async () => {
+        await loadGenres();
+        await loadTitles();
+    });
+
+    $('genre').addEventListener('change', loadTitles);
     $('search').addEventListener('input', () => {
         clearTimeout(window.__jfrSearchTimer);
         window.__jfrSearchTimer = setTimeout(loadTitles, 250);
@@ -231,6 +257,7 @@
         try {
             updateControls();
             await loadLibraries();
+            await loadGenres();
             await loadTitles();
         } catch (error) {
             showMessage(error.message || 'Unable to load the Randomizer.');

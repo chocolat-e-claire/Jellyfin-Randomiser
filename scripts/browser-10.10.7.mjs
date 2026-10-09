@@ -141,6 +141,8 @@ try {
   await standalonePage.goto('/Randomizer/Page', { waitUntil: 'domcontentloaded' });
   await waitFor(standalonePage.getByRole('heading', { name: /Jellyfin Randomizer/i }), 'standalone page loads');
   await waitFor(standalonePage.locator('#library'), 'standalone library selector');
+  await waitFor(standalonePage.locator('#genre'), 'standalone genre selector');
+  await waitFor(standalonePage.locator('#search'), 'standalone search box');
   await waitFor(standalonePage.locator('#randomize'), 'standalone randomize button');
   const standaloneLibraries = await standalonePage.locator('#library option').allTextContents();
   if (!standaloneLibraries.includes('Allowed Movies')) {
@@ -155,7 +157,14 @@ try {
   await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button after Details navigation');
   await page.locator('[data-randomizer-button]').click();
   await waitFor(page.locator('#jfr'), 'Movies Randomizer modal reopens');
-
+  await waitFor(page.locator('#jfr-genre'), 'Movies genre filter');
+  const movieGenres = await page.locator('#jfr-genre option').allTextContents();
+  if (!movieGenres.includes('Action') || !movieGenres.includes('Comedy')) {
+    throw new Error(`Movies genre filter did not expose expected genres: ${movieGenres.join(', ')}`);
+  }
+  await page.locator('#jfr-genre').selectOption({ label: 'Action' });
+  await page.waitForTimeout(500);
+  await waitForSingle(page, '#jfr-results input[type="checkbox"]', 'genre filter returns one Action movie');
   await page.locator('#jfr-q').fill('Allowed Movie 1');
   await page.waitForTimeout(500);
   await waitForSingle(page, '#jfr-results input[type="checkbox"]', 'movie search returns one fixture for Play');

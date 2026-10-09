@@ -36,6 +36,9 @@ public sealed record LibraryDto(
     [property: JsonPropertyName("id")] Guid Id,
     [property: JsonPropertyName("name")] string Name);
 
+public sealed record GenreDto(
+    [property: JsonPropertyName("name")] string Name);
+
 public sealed class RandomizeResult
 {
     [JsonPropertyName("itemId")]
