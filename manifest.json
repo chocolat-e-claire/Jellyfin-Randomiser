@@ -6,6 +6,7 @@
     "overview": "Randomize accessible Jellyfin library content without modifying Jellyfin Web files.",
     "owner": "chocolat-e-claire",
     "category": "General",
+    "imageUrl": "https://raw.githubusercontent.com/chocolat-e-claire/Jellyfin-Randomiser/main/assets/jellyfin-randomizer.jpg",
     "versions": [
       {
         "version": "0.1.0.11",
