@@ -5,8 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Jellyfin Randomizer</title>
     <style>
-        /* Reserve the vertical scrollbar gutter so result updates do not shift the page width. */
+        /* Keep page and result-list scrollbar tracks consistent in Chromium, including overlay-scrollbar setups. */
         html{overflow-y:scroll;scrollbar-gutter:stable}
+        .results{overflow-y:scroll;scrollbar-gutter:stable}
+        html,.results{scrollbar-color:#666 #202020;scrollbar-width:auto}
+        html::-webkit-scrollbar,.results::-webkit-scrollbar{width:12px}
+        html::-webkit-scrollbar-track,.results::-webkit-scrollbar-track{background:#202020}
+        html::-webkit-scrollbar-thumb,.results::-webkit-scrollbar-thumb{background:#666;border:2px solid #202020;border-radius:8px}
+        html::-webkit-scrollbar-thumb:hover,.results::-webkit-scrollbar-thumb:hover{background:#888}
         :root{color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
         body{margin:0;background:#101010;color:#fff}
         *{box-sizing:border-box}
@@ -19,7 +25,7 @@
         select,input[type=search]{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #444;background:#121212;color:#fff}
         button{padding:10px 14px;border:0;border-radius:8px;background:#4c8dff;color:#fff;cursor:pointer}
         button.secondary{background:#333}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-        .results{max-height:280px;overflow:auto;scrollbar-gutter:stable;border:1px solid #333;border-radius:8px;padding:8px}
+        .results{max-height:280px;overflow-x:hidden;overflow-y:scroll;border:1px solid #333;border-radius:8px;padding:8px}
         .results label{font-weight:400;padding:7px;border-radius:6px}.results label:hover{background:#242424}
         .controls{display:flex;flex-wrap:wrap;gap:16px;margin-top:16px}
         .controls label{font-weight:400}.result{margin-top:18px;padding:18px;border-radius:10px;background:#232323}
