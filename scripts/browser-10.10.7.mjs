@@ -76,7 +76,11 @@ const loginContext = await browserInstance.newContext({ baseURL: baseUrl });
 const loginPage = await loginContext.newPage();
 const unauthenticatedRandomizerRequests = [];
 loginPage.on('request', request => {
-  if (new URL(request.url()).pathname.startsWith('/Randomizer/')) {
+  const pathname = new URL(request.url()).pathname;
+  // Loading the injected JS/CSS assets is expected on index.html. Only API calls
+  // (including the anonymous runtime-status endpoint) must wait until login.
+  if (pathname.startsWith('/Randomizer/') &&
+      !/^\/Randomizer\/(Script\.js|Styles\.css)$/.test(pathname)) {
     unauthenticatedRandomizerRequests.push(request.url());
   }
 });
