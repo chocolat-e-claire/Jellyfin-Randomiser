@@ -85,12 +85,28 @@ loginPage.on('request', request => {
   }
 });
 await loginPage.goto('/web/index.html', { waitUntil: 'domcontentloaded' });
-await loginPage.locator('input[type="password"]').first().waitFor({ state: 'visible', timeout: 60000 });
+// Jellyfin 10.10.7 may initially show user-selection tiles rather than a password
+// field. Assert that the Web UI has rendered without an authenticated session instead
+// of coupling this regression to one particular login-form layout.
+await loginPage.waitForFunction(() => {
+  const text = document.body?.innerText?.trim() || '';
+  const signedIn = text.includes('Sign Out') || location.hash === '#/home.html';
+  return text.length > 0 && !signedIn;
+}, undefined, { timeout: 60000 });
 await loginPage.waitForTimeout(1500);
+const unauthenticatedState = await loginPage.evaluate(() => ({
+  url: location.href,
+  title: document.title,
+  bodyText: document.body?.innerText?.slice(0, 1000) || '',
+  storedCredentials: localStorage.getItem('jellyfin_credentials')
+}));
+if (unauthenticatedState.storedCredentials !== null) {
+  throw new Error('Unauthenticated browser profile unexpectedly contains Jellyfin credentials.');
+}
 if (unauthenticatedRandomizerRequests.length > 0) {
   throw new Error('Randomizer made requests before login: ' + unauthenticatedRandomizerRequests.join(', '));
 }
-console.log('PASS: unauthenticated login page is visible and Randomizer makes no API requests');
+console.log('PASS: clean unauthenticated Jellyfin Web screen rendered with no Randomizer API requests: ' + JSON.stringify(unauthenticatedState));
 await loginContext.close();
 
 const context = await browserInstance.newContext({
