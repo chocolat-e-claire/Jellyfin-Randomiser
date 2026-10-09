@@ -26,11 +26,10 @@
 .jfr-result{text-align:center;padding:1rem}
 .jfr-result h2{color:#fff;font-size:1.5rem}
 .jfr-result p{color:#d5d8ec;line-height:1.5}
-.jfr-die{font-size:4rem;filter:drop-shadow(0 0 18px rgba(137,113,255,.5));animation:jfr-spin .7s linear infinite}
 .jfr-error{padding:.75rem .9rem;border:1px solid rgba(255,115,145,.35);border-radius:9px;background:rgba(117,28,58,.25);color:#ffc2d0}
-@keyframes jfr-spin{to{transform:rotate(360deg)}}
+}
 @media(max-width:600px){.jfr-backdrop{padding:.5rem}.jfr-modal{padding:.85rem;border-radius:14px;max-height:94vh}.jfr-head h2{font-size:1.2rem}.jfr-actions button{flex:1}.jfr-controls{gap:.4rem}}
-@media(prefers-reduced-motion:reduce){.jfr-modal button,.jfr-die{transition:none;animation:none}}
+@media(prefers-reduced-motion:reduce){.jfr-modal button{transition:none;animation:none}}
 
 /* Keep the viewport width steady as the results page grows or shrinks. */
 html{scrollbar-gutter:stable}
