@@ -71,19 +71,35 @@
             return page.querySelector('#seriesTab .focuscontainer-x');
         }
 
+        if (page.id === 'homePage') {
+            return page.querySelector('.homeSectionsContainer');
+        }
+
         return null;
     }
 
     function addButton() {
-        type = pageType();
+        const page = activePage();
+        const routeType = pageType();
+        const isHome = page?.id === 'homePage';
+
+        if (routeType !== null) {
+            type = routeType;
+        } else if (isHome) {
+            type = 'Movie';
+        }
 
         const existing = document.querySelector('[' + BUTTON_MARK + ']');
-        if (type === null) {
+        if (routeType === null && !isHome) {
             existing?.remove();
             return;
         }
 
-        if (C.enabled === false || existing) {
+        if (existing && !page?.contains(existing)) {
+            existing.remove();
+        }
+
+        if (C.enabled === false || document.querySelector('[' + BUTTON_MARK + ']')) {
             return;
         }
 
@@ -98,8 +114,16 @@
         button.setAttribute(BUTTON_MARK, '');
         button.title = 'Randomize';
         button.textContent = '🎲 Randomize';
-        button.addEventListener('click', openModal);
-        container.appendChild(button);
+        button.addEventListener('click', () => {
+            type = pageType() || 'Movie';
+            openModal();
+        });
+
+        if (isHome) {
+            container.insertBefore(button, container.firstChild);
+        } else {
+            container.appendChild(button);
+        }
     }
 
     function openModal() {
@@ -110,28 +134,22 @@
         dialog.id = 'jfr';
         dialog.className = 'jfr-backdrop';
         dialog.innerHTML = '<div class="jfr-modal" role="dialog" aria-modal="true" aria-labelledby="jfr-title">' +
-            '<div class="jfr-head"><h2 id="jfr-title">🎲 Randomize ' +
-            (type === 'Movie' ? 'Movies' : 'TV Shows') +
-            '</h2><button class="jfr-close" aria-label="Close">×</button></div>' +
+            '<div class="jfr-head"><h2 id="jfr-title">🎲 Randomizer</h2><button class="jfr-close" aria-label="Close">×</button></div>' +
+            '<label class="jfr-type-label" for="jfr-type">Content type</label>' +
+            '<select id="jfr-type" aria-label="Content type"><option value="Movie">Movies</option><option value="Series">TV Shows</option></select>' +
             '<select id="jfr-lib" aria-label="Library"></select>' +
             '<select id="jfr-genre" aria-label="Genre"></select>' +
             '<input id="jfr-q" class="jfr-search" placeholder="Search all accessible titles" aria-label="Search titles">' +
             '<div id="jfr-results" class="jfr-results"></div>' +
+            '<div id="jfr-type-controls" class="jfr-controls"></div>' +
             '<div class="jfr-controls">' +
-            (type === 'Series'
-                ? '<label><input type="radio" name="jfr-mode" value="RandomShow" checked> Random Show</label>' +
-                  '<label><input type="radio" name="jfr-mode" value="RandomEpisode"> Random Episode</label>' +
-                  '<select id="jfr-strategy" aria-label="Episode strategy">' +
-                  '<option value="EqualEpisode">Equal per episode</option>' +
-                  '<option value="EqualShow">Equal per show</option></select>'
-                : '<strong>Random Movie</strong>') +
             '<select id="jfr-watched" aria-label="Watched filter">' +
             '<option value="All">All</option><option value="Unwatched">Unwatched</option><option value="Watched">Watched</option></select>' +
             '<select id="jfr-history" aria-label="Recent result avoidance">' +
             '<option value="0">No history avoidance</option><option value="1">Avoid 1 recent</option>' +
             '<option value="5">Avoid 5 recent</option><option value="10">Avoid 10 recent</option>' +
             '<option value="20">Avoid 20 recent</option></select>' +
-            '</div><div class="jfr-actions">' +
+            '</div><div class="jfr-actions">'
             '<button class="jfr-close2">Cancel</button><button class="jfr-go">Randomize</button>' +
             '</div></div>';
 
@@ -148,6 +166,16 @@
         });
         dialog.tabIndex = -1;
         dialog.focus();
+
+        const typeSelect = dialog.querySelector('#jfr-type');
+        typeSelect.value = type || 'Movie';
+        updateTypeControls(dialog);
+        typeSelect.addEventListener('change', async () => {
+            type = typeSelect.value;
+            updateTypeControls(dialog);
+            await loadGenres(dialog);
+            await search(dialog);
+        });
 
         const watched = dialog.querySelector('#jfr-watched');
         watched.value = C.DefaultWatchedFilter || 'All';
@@ -170,10 +198,27 @@
             await search(dialog);
         });
         dialog.querySelector('#jfr-genre').addEventListener('change', () => search(dialog));
-        dialog.querySelector('[name="jfr-mode"]')?.addEventListener('change', () => search(dialog));
+        dialog.querySelector('#jfr-type-controls').addEventListener('change', () => search(dialog));
         dialog.querySelector('.jfr-go').addEventListener('click', () => randomize(dialog));
 
         loadLibraries(dialog);
+    }
+
+    function updateTypeControls(dialog) {
+        const controls = dialog.querySelector('#jfr-type-controls');
+        const isSeries = type === 'Series';
+        controls.innerHTML = isSeries
+            ? '<label><input type="radio" name="jfr-mode" value="RandomShow" checked> Random Show</label>' +
+              '<label><input type="radio" name="jfr-mode" value="RandomEpisode"> Random Episode</label>' +
+              '<select id="jfr-strategy" aria-label="Episode strategy">' +
+              '<option value="EqualEpisode">Equal per episode</option>' +
+              '<option value="EqualShow">Equal per show</option></select>'
+            : '<strong>Random Movie</strong>';
+
+        const strategy = controls.querySelector('#jfr-strategy');
+        if (strategy) {
+            strategy.value = C.DefaultEpisodeStrategy || 'EqualEpisode';
+        }
     }
 
     async function loadLibraries(dialog) {
