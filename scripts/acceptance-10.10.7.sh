@@ -43,14 +43,17 @@ randomize() {
   local watched="$5"
   local avoid_recent="$6"
   local strategy="$7"
+  local genre="${8:-}"
 
-  python3 - "$mode" "$library_id" "$items_json" "$watched" "$avoid_recent" "$strategy" > "$TMP/randomize.json" <<'PY'
+  python3 - "$mode" "$library_id" "$items_json" "$watched" "$avoid_recent" "$strategy" "$genre" > "$TMP/randomize.json" <<'PY'
 import json
 import sys
-mode, library_id, items_json, watched, avoid_recent, strategy = sys.argv[1:]
+mode, library_id, items_json, watched, avoid_recent, strategy = sys.argv[1:7]
+genre = sys.argv[7] if len(sys.argv) > 7 else ""
 print(json.dumps({
     "mode": mode,
     "libraryId": library_id or None,
+    "genre": genre or None,
     "itemIds": json.loads(items_json),
     "strategy": strategy,
     "watched": watched,
@@ -263,14 +266,42 @@ print("Search result:", name)
 assert name == "Allowed Movie 1", items
 PY
 
-echo "== Verify search hard cap =="
-SEARCH_CAPPED="$(user_get '/Randomizer/Search?itemType=Movie&limit=1000')"
-export SEARCH_CAPPED
+echo "== Verify genre-first picker data =="
+MOVIE_GENRES="$(user_get '/Randomizer/Genres?itemType=Movie')"
+SHOW_GENRES="$(user_get '/Randomizer/Genres?itemType=Series')"
+export MOVIE_GENRES SHOW_GENRES
 python3 - <<'PY'
 import json, os
-items = json.loads(os.environ["SEARCH_CAPPED"])
-print("Search limit=1000 returned:", len(items), "items")
-assert len(items) <= 100, items
+movie_genres = json.loads(os.environ["MOVIE_GENRES"])
+show_genres = json.loads(os.environ["SHOW_GENRES"])
+print("Movie genres:", movie_genres)
+print("Show genres:", show_genres)
+assert "Comedy" in movie_genres, movie_genres
+assert "Comedy" in show_genres, show_genres
+assert movie_genres == sorted(movie_genres, key=str.casefold), movie_genres
+assert show_genres == sorted(show_genres, key=str.casefold), show_genres
+PY
+
+COMEDY_MOVIES="$(user_get '/Randomizer/Search?itemType=Movie&genre=Comedy&limit=0')"
+export COMEDY_MOVIES
+python3 - <<'PY'
+import json, os
+items = json.loads(os.environ["COMEDY_MOVIES"])
+names = [x.get("name", x.get("Name")) for x in items]
+print("Comedy movie list:", names)
+assert names == ["Allowed Movie 1", "Allowed Movie 2"], names
+assert names == sorted(names, key=str.casefold), names
+PY
+
+COMEDY_SHOWS="$(user_get '/Randomizer/Search?itemType=Series&genre=Comedy&limit=0')"
+export COMEDY_SHOWS
+python3 - <<'PY'
+import json, os
+items = json.loads(os.environ["COMEDY_SHOWS"])
+names = [x.get("name", x.get("Name")) for x in items]
+print("Comedy show list:", names)
+assert names == ["Test Show A", "Test Show B"], names
+assert names == sorted(names, key=str.casefold), names
 PY
 
 
@@ -302,12 +333,19 @@ BLOCKED_MOVIE_ID="$(printf '%s\n' "$FIXTURES" | sed -n '4p')"
 
 echo "== Random movie =="
 MOVIE_RESULT="$(randomize "$USER_TOKEN" RandomMovie "$ALLOWED_MOVIES_LIB" '["'"$ALLOWED_MOVIE_ID"'"]' All 0 EqualEpisode)"
+GENRE_MOVIE_RESULT="$(randomize "$USER_TOKEN" RandomMovie "$ALLOWED_MOVIES_LIB" '[]' All 0 EqualEpisode Comedy)"
 export MOVIE_RESULT
 python3 - <<'PY'
 import json, os
 r = json.loads(os.environ["MOVIE_RESULT"])
 assert r["itemType"] == "Movie", r
 assert r["name"] == "Allowed Movie 1", r
+PY
+export GENRE_MOVIE_RESULT
+python3 - <<'PY'
+import json, os
+r = json.loads(os.environ["GENRE_MOVIE_RESULT"])
+assert r["name"] in {"Allowed Movie 1", "Allowed Movie 2"}, r
 PY
 
 echo "== Random show =="
@@ -322,6 +360,7 @@ PY
 
 echo "== Single-show random episode =="
 EPISODE_RESULT="$(randomize "$USER_TOKEN" RandomEpisode "$ALLOWED_SHOWS_LIB" '["'"$SHOW_A_ID"'"]' All 0 EqualEpisode)"
+GENRE_EPISODE_RESULT="$(randomize "$USER_TOKEN" RandomEpisode "$ALLOWED_SHOWS_LIB" '[]' All 0 EqualEpisode Comedy)"
 export EPISODE_RESULT
 python3 - <<'PY'
 import json, os
@@ -330,6 +369,13 @@ assert r["itemType"] == "Episode", r
 assert r.get("seriesName") == "Test Show A", r
 assert r.get("seasonNumber") == 1, r
 assert r.get("episodeNumber") in {1, 2}, r
+PY
+export GENRE_EPISODE_RESULT
+python3 - <<'PY'
+import json, os
+r = json.loads(os.environ["GENRE_EPISODE_RESULT"])
+assert r["itemType"] == "Episode", r
+assert r.get("seriesName") in {"Test Show A", "Test Show B"}, r
 PY
 
 echo "== Multi-show EqualShow episode =="
