@@ -1,0 +1,26 @@
+name: README repository link guard
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  repository-link:
+    name: Ensure README keeps the plugin repository URL
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify repository URL is documented
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected='https://raw.githubusercontent.com/chocolat-e-claire/Jellyfin-Randomiser/main/manifest.json'
+          if ! grep -Fq "$expected" README.md; then
+            echo "::error::README.md must include the Jellyfin Randomizer plugin repository URL: $expected"
+            exit 1
+          fi
+          echo "README.md contains the required plugin repository URL."
