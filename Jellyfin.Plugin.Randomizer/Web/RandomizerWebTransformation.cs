@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Jellyfin.Plugin.Randomizer.Services;
 
 namespace Jellyfin.Plugin.Randomizer.Web;
 
@@ -15,12 +16,12 @@ public static class RandomizerWebTransformation
         var contents = payload.Contents ?? string.Empty;
 
         if (contents.Contains("data-jellyfin-randomizer-loader", StringComparison.Ordinal)
-            || Plugin.Instance?.Configuration.Enabled == false)
+            || !IsEnabled())
         {
             return contents;
         }
 
-        var version = Plugin.Instance?.Version.ToString() ?? "0.1.0.5";
+        var version = Plugin.Instance?.Version.ToString() ?? "0.1.0.10";
         var injection = $"""
             <link data-jellyfin-randomizer-loader rel="stylesheet" href="../Randomizer/Styles.css?v={version}">
             <script data-jellyfin-randomizer-loader src="../Randomizer/Script.js?v={version}" defer></script>
@@ -31,4 +32,8 @@ public static class RandomizerWebTransformation
             ? contents.Insert(closingBody, injection)
             : contents + injection;
     }
+
+    private static bool IsEnabled() =>
+        RandomizerRuntimeState.Instance?.IsEnabled
+        ?? Plugin.Instance?.Configuration.Enabled != false;
 }
