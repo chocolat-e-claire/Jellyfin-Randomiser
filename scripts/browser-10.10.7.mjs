@@ -202,8 +202,10 @@ try {
   console.log('PASS: home button opens full Randomizer and content type selector switches modes');
 
   console.log('== Jellyfin library integration ==');
-  const adminToken = process.env.JELLYFIN_ADMIN_TOKEN || token;
-  const allowedLibrary = await fetch(new URL('/Library/VirtualFolders', baseUrl), { headers: { 'X-Emby-Token': adminToken } });
+  const libraryFixture = await page.evaluate(async () => {
+    return await window.ApiClient.getJSON(window.ApiClient.getUrl('Library/VirtualFolders'), true);
+  });
+  const allowedLibrary = { ok: true, json: async () => libraryFixture };
   if (!allowedLibrary.ok) {
     throw new Error(`Unable to read library folders: HTTP ${allowedLibrary.status}`);
   }
