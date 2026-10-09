@@ -25,6 +25,11 @@ public sealed class RandomizerController : ControllerBase
     [HttpGet("Page")]
     public IActionResult Page()
     {
+        if (!IsEnabled())
+        {
+            return NotFound();
+        }
+
         using var stream = typeof(Plugin).Assembly.GetManifestResourceStream(PageResource);
         if (stream is null)
         {
@@ -39,6 +44,11 @@ public sealed class RandomizerController : ControllerBase
     [HttpGet("Script.js")]
     public IActionResult Script()
     {
+        if (!IsEnabled())
+        {
+            return NotFound();
+        }
+
         using var stream = typeof(Plugin).Assembly.GetManifestResourceStream(
             "Jellyfin.Plugin.Randomizer.Web.randomizer.js");
 
@@ -55,6 +65,11 @@ public sealed class RandomizerController : ControllerBase
     [HttpGet("Styles.css")]
     public IActionResult Styles()
     {
+        if (!IsEnabled())
+        {
+            return NotFound();
+        }
+
         using var stream = typeof(Plugin).Assembly.GetManifestResourceStream(
             "Jellyfin.Plugin.Randomizer.Web.randomizer.css");
 
@@ -68,10 +83,17 @@ public sealed class RandomizerController : ControllerBase
     }
 
     [HttpGet("Libraries")]
-    public ActionResult<IReadOnlyList<LibraryDto>> Libraries() =>
-        Current() is { } u
+    public ActionResult<IReadOnlyList<LibraryDto>> Libraries()
+    {
+        if (!IsEnabled())
+        {
+            return NotFound();
+        }
+
+        return Current() is { } u
             ? Ok(service.Libraries(u))
             : Unauthorized();
+    }
 
     [HttpGet("Search")]
     public ActionResult<IReadOnlyList<LibraryDto>> Search(
@@ -80,6 +102,11 @@ public sealed class RandomizerController : ControllerBase
         string? search = null,
         int limit = 50)
     {
+        if (!IsEnabled())
+        {
+            return NotFound();
+        }
+
         if (!itemType.Equals("Movie", StringComparison.OrdinalIgnoreCase)
             && !itemType.Equals("Series", StringComparison.OrdinalIgnoreCase))
         {
@@ -94,6 +121,11 @@ public sealed class RandomizerController : ControllerBase
     [HttpPost("Randomize")]
     public ActionResult<RandomizeResult> Randomize([FromBody] RandomizeRequest request)
     {
+        if (!IsEnabled())
+        {
+            return NotFound();
+        }
+
         if (request.ItemIds.Count > 500)
         {
             return BadRequest("Too many item IDs.");
@@ -105,6 +137,9 @@ public sealed class RandomizerController : ControllerBase
                 : NotFound("No eligible items were found for the current filters.")
             : Unauthorized();
     }
+
+    private static bool IsEnabled() =>
+        Plugin.Instance?.Configuration.Enabled != false;
 
     private User? Current()
     {
