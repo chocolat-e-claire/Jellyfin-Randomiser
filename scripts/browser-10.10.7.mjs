@@ -266,6 +266,7 @@ try {
     throw new Error('Movie Play test could not resolve the fixture item id.');
   }
 
+  await waitFor(page.locator('.jfr-go'), 'Movies Randomizer choose button appears');
   await page.locator('.jfr-go').click();
   await waitFor(page.locator('#jfr-play'), 'Movies result Play button appears');
   const playRoutePromise = page.waitForFunction(
