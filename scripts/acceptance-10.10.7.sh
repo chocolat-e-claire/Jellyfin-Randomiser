@@ -251,26 +251,59 @@ print("Restricted Randomizer libraries:", sorted(names))
 assert names == {"Allowed Movies", "Allowed Shows"}, names
 PY
 
-echo "== Verify search pagination =="
+echo "== Verify search pagination and alphabetical ordering =="
 SEARCH="$(user_get '/Randomizer/Search?itemType=Movie&limit=1')"
 export SEARCH
 python3 - <<'PY'
 import json, os
-items = json.loads(os.environ["SEARCH"])
-assert len(items) == 1, items
+result = json.loads(os.environ["SEARCH"])
+items = result["items"]
+assert len(items) == 1, result
+assert result["totalCount"] == 2, result
+assert result["hasMore"] is True, result
 name = items[0].get("name", items[0].get("Name"))
-print("Search result:", name)
-assert name == "Allowed Movie 1", items
+print("Search page 1:", name)
+assert name == "Allowed Movie 1", result
 PY
 
-echo "== Verify search hard cap =="
+SEARCH_PAGE_2="$(user_get '/Randomizer/Search?itemType=Movie&limit=1&startIndex=1')"
+export SEARCH_PAGE_2
+python3 - <<'PY'
+import json, os
+result = json.loads(os.environ["SEARCH_PAGE_2"])
+items = result["items"]
+assert len(items) == 1, result
+assert result["totalCount"] == 2, result
+assert result["hasMore"] is False, result
+name = items[0].get("name", items[0].get("Name"))
+print("Search page 2:", name)
+assert name == "Allowed Movie 2", result
+PY
+
+echo "== Verify search does not silently truncate results =="
 SEARCH_CAPPED="$(user_get '/Randomizer/Search?itemType=Movie&limit=1000')"
 export SEARCH_CAPPED
 python3 - <<'PY'
 import json, os
-items = json.loads(os.environ["SEARCH_CAPPED"])
-print("Search limit=1000 returned:", len(items), "items")
-assert len(items) <= 100, items
+result = json.loads(os.environ["SEARCH_CAPPED"])
+items = result["items"]
+print("Search limit=1000 returned:", len(items), "items of", result["totalCount"])
+assert len(items) == 2, result
+assert result["totalCount"] == 2, result
+assert result["hasMore"] is False, result
+PY
+
+echo "== Verify search works across accessible library =="
+SEARCH_TERM="$(user_get '/Randomizer/Search?itemType=Movie&search=Allowed')"
+export SEARCH_TERM
+python3 - <<'PY'
+import json, os
+result = json.loads(os.environ["SEARCH_TERM"])
+names = [item.get("name", item.get("Name")) for item in result["items"]]
+print("Search term results:", names)
+assert names == ["Allowed Movie 1", "Allowed Movie 2"], result
+assert result["totalCount"] == 2, result
+assert result["hasMore"] is False, result
 PY
 
 
