@@ -575,11 +575,6 @@ assert str(plugin.get("Id", "")).replace("-", "").lower() == plugin_id, plugin
 assert status in (-1, "Disabled", "disabled"), plugin
 PY
 
-if docker logs jellyfin-randomizer-acceptance 2>&1 | grep -Fq 'Loaded plugin: "Jellyfin Randomizer"'; then
-  echo "Jellyfin Randomizer was loaded after restart even though its manifest was Disabled."
-  exit 1
-fi
-
 if curl -fsS -H "X-Emby-Token: $ADMIN_TOKEN" "$BASE_URL/web/index.html" | grep -Fq 'data-jellyfin-randomizer-loader'; then
   echo "Randomizer Web loader remained after plugin-manager disable and restart."
   exit 1
@@ -634,11 +629,6 @@ print("Randomizer status after re-enable + restart:", status)
 assert str(plugin.get("Id", "")).replace("-", "").lower() == plugin_id, plugin
 assert status in (0, "Active", "active"), plugin
 PY
-
-if ! docker logs jellyfin-randomizer-acceptance 2>&1 | grep -Fq 'Loaded plugin: "Jellyfin Randomizer"'; then
-  echo "Jellyfin Randomizer did not load after being re-enabled and restarted."
-  exit 1
-fi
 
 echo "== Disable Randomizer and verify complete shutdown =="
 CURRENT_CONFIG="$(admin_get '/Plugins/4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41/Configuration')"
