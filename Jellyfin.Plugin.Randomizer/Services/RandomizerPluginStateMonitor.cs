@@ -12,9 +12,11 @@ public sealed class RandomizerPluginStateMonitor : IHostedService
     private readonly RandomizerRuntimeState runtimeState;
     private readonly RandomizerWebIntegration webIntegration;
     private readonly ILogger<RandomizerPluginStateMonitor> logger;
+    private readonly object syncGate = new();
 
     private CancellationTokenSource? cancellationTokenSource;
     private Task? monitorTask;
+    private FileSystemWatcher? manifestWatcher;
 
     public RandomizerPluginStateMonitor(
         IPluginManager pluginManager,
@@ -31,12 +33,16 @@ public sealed class RandomizerPluginStateMonitor : IHostedService
     public Task StartAsync(CancellationToken cancellationToken)
     {
         cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        ConfigureManifestWatcher();
         monitorTask = MonitorAsync(cancellationTokenSource.Token);
         return Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        manifestWatcher?.Dispose();
+        manifestWatcher = null;
+
         if (cancellationTokenSource is null || monitorTask is null)
         {
             return;
@@ -57,34 +63,7 @@ public sealed class RandomizerPluginStateMonitor : IHostedService
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            try
-            {
-                var plugin = pluginManager.Plugins.FirstOrDefault(p => p.Id == Plugin.PluginId);
-                if (plugin is not null && TryReadPersistedEnabled(plugin.Path, out var enabled))
-                {
-                    SyncJellyfinUiStatus(plugin, enabled);
-
-                    if (enabled != runtimeState.PluginEnabled)
-                    {
-                        runtimeState.SetPluginEnabled(enabled);
-
-                        if (enabled)
-                        {
-                            webIntegration.Register();
-                            logger.LogInformation("Jellyfin Randomizer runtime enable detected.");
-                        }
-                        else
-                        {
-                            webIntegration.Unregister();
-                            logger.LogInformation("Jellyfin Randomizer runtime disable detected.");
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error while monitoring Jellyfin Randomizer plugin state.");
-            }
+            SyncPersistedState();
 
             try
             {
@@ -93,6 +72,66 @@ public sealed class RandomizerPluginStateMonitor : IHostedService
             catch (OperationCanceledException)
             {
                 break;
+            }
+        }
+    }
+
+    private void ConfigureManifestWatcher()
+    {
+        var plugin = pluginManager.Plugins.FirstOrDefault(p => p.Id == Plugin.PluginId);
+        if (plugin is null || !Directory.Exists(plugin.Path))
+        {
+            return;
+        }
+
+        manifestWatcher = new FileSystemWatcher(plugin.Path, "meta.json")
+        {
+            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName,
+            EnableRaisingEvents = true
+        };
+        manifestWatcher.Changed += OnManifestChanged;
+        manifestWatcher.Created += OnManifestChanged;
+        manifestWatcher.Renamed += OnManifestChanged;
+    }
+
+    private void OnManifestChanged(object sender, FileSystemEventArgs e) =>
+        SyncPersistedState();
+
+    private void SyncPersistedState()
+    {
+        lock (syncGate)
+        {
+            try
+            {
+                var plugin = pluginManager.Plugins.FirstOrDefault(p => p.Id == Plugin.PluginId);
+                if (plugin is null || !TryReadPersistedEnabled(plugin.Path, out var enabled))
+                {
+                    return;
+                }
+
+                SyncJellyfinUiStatus(plugin, enabled);
+
+                if (enabled == runtimeState.PluginEnabled)
+                {
+                    return;
+                }
+
+                runtimeState.SetPluginEnabled(enabled);
+
+                if (enabled)
+                {
+                    webIntegration.Register();
+                    logger.LogInformation("Jellyfin Randomizer runtime enable detected.");
+                }
+                else
+                {
+                    webIntegration.Unregister();
+                    logger.LogInformation("Jellyfin Randomizer runtime disable detected.");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error while synchronizing Jellyfin Randomizer plugin state.");
             }
         }
     }
@@ -133,7 +172,10 @@ public sealed class RandomizerPluginStateMonitor : IHostedService
             if (status.ValueKind == JsonValueKind.String)
             {
                 var value = status.GetString();
-                enabled = !string.Equals(value, nameof(PluginStatus.Disabled), StringComparison.OrdinalIgnoreCase);
+                enabled = !string.Equals(
+                    value,
+                    nameof(PluginStatus.Disabled),
+                    StringComparison.OrdinalIgnoreCase);
                 return true;
             }
 
