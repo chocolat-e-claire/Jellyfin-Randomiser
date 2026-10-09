@@ -545,10 +545,11 @@ PY
 
 echo "== Verify Disabled status persisted to meta.json =="
 PLUGIN_MANIFEST_PATH="/config/plugins/Jellyfin Randomizer_$PLUGIN_VERSION/meta.json"
-manifest_status="$(docker exec jellyfin-randomizer-acceptance python3 - "$PLUGIN_MANIFEST_PATH" <<'PY'
-import json
-import sys
-manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+DISABLED_MANIFEST="$(docker exec jellyfin-randomizer-acceptance cat /config/plugins/Jellyfin\ Randomizer_$PLUGIN_VERSION/meta.json)"
+export DISABLED_MANIFEST
+manifest_status="$(python3 - <<'PY'
+import json, os
+manifest = json.loads(os.environ["DISABLED_MANIFEST"])
 print("Plugin manifest:", manifest)
 print(manifest.get("status"))
 PY
@@ -604,10 +605,11 @@ assert str(plugin.get("Id", "")).replace("-", "").lower() == plugin_id, plugin
 assert status in (1, "Restart", "restart"), plugin
 PY
 
-enabled_manifest_status="$(docker exec jellyfin-randomizer-acceptance python3 - "$PLUGIN_MANIFEST_PATH" <<'PY'
-import json
-import sys
-manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+ENABLED_MANIFEST="$(docker exec jellyfin-randomizer-acceptance cat /config/plugins/Jellyfin\ Randomizer_$PLUGIN_VERSION/meta.json)"
+export ENABLED_MANIFEST
+enabled_manifest_status="$(python3 - <<'PY'
+import json, os
+manifest = json.loads(os.environ["ENABLED_MANIFEST"])
 print("Plugin manifest:", manifest)
 print(manifest.get("status"))
 PY
