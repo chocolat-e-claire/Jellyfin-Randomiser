@@ -57,6 +57,8 @@ public sealed class RandomizerController : ControllerBase
     [HttpGet("Script.js")]
     public IActionResult Script()
     {
+        DisableClientCaching();
+
         if (!IsEnabled())
         {
             return NotFound();
@@ -78,6 +80,8 @@ public sealed class RandomizerController : ControllerBase
     [HttpGet("Styles.css")]
     public IActionResult Styles()
     {
+        DisableClientCaching();
+
         if (!IsEnabled())
         {
             return NotFound();
@@ -172,6 +176,15 @@ public sealed class RandomizerController : ControllerBase
                 ? Ok(r)
                 : NotFound("No eligible items were found for the current filters.")
             : Unauthorized();
+    }
+
+    private void DisableClientCaching()
+    {
+        // Resource URLs are constant while the embedded contents change with plugin updates.
+        // Prevent clients from reusing an older script that still contains the dice animation.
+        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+        Response.Headers.Pragma = "no-cache";
+        Response.Headers.Expires = "0";
     }
 
     private static bool IsEnabled() =>
