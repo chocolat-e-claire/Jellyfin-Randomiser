@@ -555,7 +555,7 @@ print(manifest.get("status"))
 PY
 )"
 echo "Disk manifest status after disable: $manifest_status"
-test "$manifest_status" = "-1"
+test "$manifest_status" = "Disabled"
 
 echo "== Restart Jellyfin and verify plugin stays disabled =="
 docker restart jellyfin-randomizer-acceptance >/dev/null
@@ -615,7 +615,7 @@ print(manifest.get("status"))
 PY
 )"
 echo "Disk manifest status after enable: $enabled_manifest_status"
-test "$enabled_manifest_status" = "0"
+test "$enabled_manifest_status" = "Active"
 
 echo "== Restart Jellyfin and verify plugin loads again =="
 docker restart jellyfin-randomizer-acceptance >/dev/null
