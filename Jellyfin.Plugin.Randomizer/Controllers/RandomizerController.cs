@@ -78,8 +78,6 @@ public sealed class RandomizerController : ControllerBase
     [HttpGet("Styles.css")]
     public IActionResult Styles()
     {
-        DisableClientCaching();
-
         if (!IsEnabled())
         {
             return NotFound();
