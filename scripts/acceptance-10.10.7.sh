@@ -251,26 +251,46 @@ print("Restricted Randomizer libraries:", sorted(names))
 assert names == {"Allowed Movies", "Allowed Shows"}, names
 PY
 
-echo "== Verify search pagination =="
-SEARCH="$(user_get '/Randomizer/Search?itemType=Movie&limit=1')"
-export SEARCH
+echo "== Verify genre list and alphabetical search =="
+MOVIE_GENRES="$(user_get '/Randomizer/Genres?itemType=Movie')"
+export MOVIE_GENRES
 python3 - <<'PY'
 import json, os
-items = json.loads(os.environ["SEARCH"])
-assert len(items) == 1, items
-name = items[0].get("name", items[0].get("Name"))
-print("Search result:", name)
-assert name == "Allowed Movie 1", items
+genres = [x.get("name", x.get("Name")) for x in json.loads(os.environ["MOVIE_GENRES"])]
+print("Movie genres:", genres)
+assert genres == sorted(genres, key=str.casefold), genres
+assert set(genres) == {"Action", "Comedy"}, genres
 PY
 
-echo "== Verify search hard cap =="
-SEARCH_CAPPED="$(user_get '/Randomizer/Search?itemType=Movie&limit=1000')"
-export SEARCH_CAPPED
+SEARCH_ALL="$(user_get '/Randomizer/Search?itemType=Movie')"
+export SEARCH_ALL
 python3 - <<'PY'
 import json, os
-items = json.loads(os.environ["SEARCH_CAPPED"])
-print("Search limit=1000 returned:", len(items), "items")
-assert len(items) <= 100, items
+items = json.loads(os.environ["SEARCH_ALL"])
+names = [x.get("name", x.get("Name")) for x in items]
+print("All accessible movie search:", names)
+assert names == sorted(names, key=str.casefold), names
+assert names == ["Allowed Movie 1", "Allowed Movie 2"], names
+PY
+
+SEARCH_ACTION="$(user_get '/Randomizer/Search?itemType=Movie&genre=Action')"
+export SEARCH_ACTION
+python3 - <<'PY'
+import json, os
+items = json.loads(os.environ["SEARCH_ACTION"])
+names = [x.get("name", x.get("Name")) for x in items]
+print("Action genre search:", names)
+assert names == ["Allowed Movie 1"], names
+PY
+
+echo "== Verify title search across entire library =="
+SEARCH_TITLE="$(user_get '/Randomizer/Search?itemType=Movie&search=Allowed%20Movie%202')"
+export SEARCH_TITLE
+python3 - <<'PY'
+import json, os
+items = json.loads(os.environ["SEARCH_TITLE"])
+names = [x.get("name", x.get("Name")) for x in items]
+assert names == ["Allowed Movie 2"], names
 PY
 
 
