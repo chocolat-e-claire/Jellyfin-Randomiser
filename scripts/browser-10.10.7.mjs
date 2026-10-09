@@ -144,9 +144,9 @@ try {
   await waitFor(standalonePage.locator('#genre'), 'standalone genre selector');
   await waitFor(standalonePage.locator('#search'), 'standalone search box');
   await waitFor(standalonePage.locator('#randomize'), 'standalone randomize button');
-  const scrollbarState = await standalonePage.evaluate(() => ({\n    gutter: getComputedStyle(document.documentElement).scrollbarGutter,\n    overflowY: getComputedStyle(document.documentElement).overflowY,\n    resultsGutter: getComputedStyle(document.querySelector('.results')).scrollbarGutter\n  }));
-  if (scrollbarGutter !== 'stable') {
-    throw new Error(`Standalone results page scrollbar gutter is not stable: ${scrollbarGutter}`);
+  const scrollbarState = await standalonePage.evaluate(() => ({ gutter: getComputedStyle(document.documentElement).scrollbarGutter, overflowY: getComputedStyle(document.documentElement).overflowY, resultsGutter: getComputedStyle(document.querySelector('.results')).scrollbarGutter }));
+  if (scrollbarState.gutter !== 'stable' || scrollbarState.overflowY !== 'scroll' || scrollbarState.resultsGutter !== 'stable') {
+    throw new Error(`Scrollbar stability CSS mismatch: ${JSON.stringify(scrollbarState)}`);
   }
   console.log('PASS: standalone results page reserves a stable scrollbar gutter');
   const standaloneLibraries = await standalonePage.locator('#library option').allTextContents();
