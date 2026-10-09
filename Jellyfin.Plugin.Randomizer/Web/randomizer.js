@@ -189,7 +189,6 @@
         const query = new URLSearchParams({
             itemType: type,
             search: dialog.querySelector('#jfr-q').value || '',
-            limit: '100'
         });
 
         const libraryId = dialog.querySelector('#jfr-lib').value;

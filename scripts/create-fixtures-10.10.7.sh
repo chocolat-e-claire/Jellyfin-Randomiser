@@ -39,6 +39,10 @@ mkdir -p "$ROOT/allowed-shows/Test Show B/Season 01"
 
 make_video "$ROOT/allowed-movies/Allowed Movie 1/Allowed Movie 1.mp4" blue
 make_video "$ROOT/allowed-movies/Allowed Movie 2/Allowed Movie 2.mp4" cyan
+for i in $(seq 3 105); do
+  mkdir -p "$ROOT/allowed-movies/Allowed Movie $i"
+  cp "$ROOT/allowed-movies/Allowed Movie 2/Allowed Movie 2.mp4" "$ROOT/allowed-movies/Allowed Movie $i/Allowed Movie $i.mp4"
+done
 make_video "$ROOT/blocked-movies/Blocked Movie 1/Blocked Movie 1.mp4" red
 make_video "$ROOT/allowed-shows/Test Show A/Season 01/Test Show A - S01E01.mp4" green
 make_video "$ROOT/allowed-shows/Test Show A/Season 01/Test Show A - S01E02.mp4" yellow

@@ -99,8 +99,7 @@ public sealed class RandomizerController : ControllerBase
     public ActionResult<IReadOnlyList<LibraryDto>> Search(
         Guid? libraryId,
         string itemType,
-        string? search = null,
-        int limit = 50)
+        string? search = null)
     {
         if (!IsEnabled())
         {
@@ -114,7 +113,7 @@ public sealed class RandomizerController : ControllerBase
         }
 
         return Current() is { } u
-            ? Ok(service.Search(u, libraryId, itemType, search, limit))
+            ? Ok(service.Search(u, libraryId, itemType, search))
             : Unauthorized();
     }
 
