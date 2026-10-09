@@ -235,7 +235,8 @@ try {
   await page.locator('[data-randomizer-button]').click();
   await waitFor(page.locator('#jfr'), 'Movies Randomizer modal reopens');
   await waitFor(page.locator('#jfr-genre'), 'Movies genre filter');
-  await page.waitForFunction(() => document.querySelectorAll('#jfr-genre option').length > 1, undefined, { timeout: 15000 });
+  await page.waitForTimeout(1000);
+  console.log('Movie genre load state: ' + await page.evaluate(() => JSON.stringify({ options: [...document.querySelectorAll('#jfr-genre option')].map(o => o.textContent), results: document.querySelector('#jfr-results')?.textContent, errors: performance.getEntriesByType('resource').filter(e => e.name.includes('/Randomizer/Genres')).map(e => e.name) })));
   const movieGenres = await page.locator('#jfr-genre option').allTextContents();
   if (!movieGenres.includes('Action') || !movieGenres.includes('Comedy')) {
     const debug = await page.evaluate(() => JSON.stringify({ options: [...document.querySelectorAll('#jfr-genre option')].map(o => o.textContent), resultText: document.querySelector('#jfr-results')?.textContent }));
