@@ -294,7 +294,6 @@
         const render = () => {
             dialog.querySelector('.jfr-modal').innerHTML =
                 '<div class="jfr-result">' +
-                '<div class="jfr-die" aria-hidden="true">🎲</div>' +
                 '<h2>' + esc(result.name) + '</h2>' +
                 episode +
                 '<p>' + esc(result.overview || '') + '</p>' +
@@ -315,12 +314,7 @@
             });
         };
 
-        if (C.AnimationEnabled === false) {
-            render();
-        } else {
-            dialog.querySelector('.jfr-die')?.remove();
-            setTimeout(render, Math.max(500, Number(C.AnimationDurationMs) || 2200));
-        }
+        render();
     }
 
     function refresh() {
