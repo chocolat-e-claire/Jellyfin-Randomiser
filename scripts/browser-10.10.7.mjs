@@ -144,11 +144,36 @@ try {
   await waitFor(standalonePage.locator('#genre'), 'standalone genre selector');
   await waitFor(standalonePage.locator('#search'), 'standalone search box');
   await waitFor(standalonePage.locator('#randomize'), 'standalone randomize button');
-  const scrollbarState = await standalonePage.evaluate(() => ({ gutter: getComputedStyle(document.documentElement).scrollbarGutter, overflowY: getComputedStyle(document.documentElement).overflowY, resultsGutter: getComputedStyle(document.querySelector('.results')).scrollbarGutter }));
-  if (scrollbarState.gutter !== 'stable' || scrollbarState.overflowY !== 'scroll' || scrollbarState.resultsGutter !== 'stable') {
+  const scrollbarState = await standalonePage.evaluate(() => ({
+    gutter: getComputedStyle(document.documentElement).scrollbarGutter,
+    overflowY: getComputedStyle(document.documentElement).overflowY,
+    pageScrollbarWidth: getComputedStyle(document.documentElement, '::-webkit-scrollbar').width,
+    resultsGutter: getComputedStyle(document.querySelector('.results')).scrollbarGutter,
+    resultsOverflowY: getComputedStyle(document.querySelector('.results')).overflowY,
+    resultsScrollbarWidth: getComputedStyle(document.querySelector('.results'), '::-webkit-scrollbar').width
+  }));
+  if (scrollbarState.gutter !== 'stable' || scrollbarState.overflowY !== 'scroll' ||
+      scrollbarState.pageScrollbarWidth !== '12px' || scrollbarState.resultsGutter !== 'stable' ||
+      scrollbarState.resultsOverflowY !== 'scroll' || scrollbarState.resultsScrollbarWidth !== '12px') {
     throw new Error(`Scrollbar stability CSS mismatch: ${JSON.stringify(scrollbarState)}`);
   }
-  console.log('PASS: standalone results page reserves a stable scrollbar gutter');
+  const widthStability = await standalonePage.evaluate(() => {
+    const results = document.querySelector('.results');
+    const wrap = document.querySelector('.wrap');
+    results.innerHTML = Array.from({length: 80}, (_, i) =>
+      '<label><input type="checkbox"> Scrollbar fixture ' + i + '</label>'
+    ).join('');
+    const overflowing = { wrap: wrap.getBoundingClientRect().width, results: results.getBoundingClientRect().width, client: results.clientWidth };
+    results.innerHTML = '<label><input type="checkbox"> One result</label>';
+    const short = { wrap: wrap.getBoundingClientRect().width, results: results.getBoundingClientRect().width, client: results.clientWidth };
+    return { overflowing, short };
+  });
+  if (Math.abs(widthStability.overflowing.wrap - widthStability.short.wrap) > 0.5 ||
+      Math.abs(widthStability.overflowing.results - widthStability.short.results) > 0.5 ||
+      Math.abs(widthStability.overflowing.client - widthStability.short.client) > 0.5) {
+    throw new Error(`Scrollbar changed layout width between overflowing and short results: ${JSON.stringify(widthStability)}`);
+  }
+  console.log('PASS: Chrome scrollbar styling and layout width stay stable with and without overflowing results');
   const standaloneLibraries = await standalonePage.locator('#library option').allTextContents();
   if (!standaloneLibraries.includes('Allowed Movies')) {
     throw new Error(`Standalone page did not expose the restricted library: ${standaloneLibraries.join(', ')}`);
