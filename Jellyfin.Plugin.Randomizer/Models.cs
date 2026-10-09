@@ -26,6 +26,7 @@ public sealed class RandomizeRequest
 {
     public RandomizationMode Mode { get; set; }
     public Guid? LibraryId { get; set; }
+    public string? Genre { get; set; }
     public List<Guid> ItemIds { get; set; } = new();
     public RandomizationStrategy Strategy { get; set; } = RandomizationStrategy.EqualEpisode;
     public WatchedFilter Watched { get; set; } = WatchedFilter.All;
