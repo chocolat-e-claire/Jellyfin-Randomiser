@@ -6,7 +6,16 @@
     "overview": "Randomize accessible Jellyfin library content without modifying Jellyfin Web files.",
     "owner": "chocolat-e-claire",
     "category": "General",
+    "imageUrl": "https://raw.githubusercontent.com/chocolat-e-claire/Jellyfin-Randomiser/v0.1.0.12/images/randomizer.svg",
     "versions": [
+      {
+        "version": "0.1.0.12",
+        "changelog": "Add Jellyfin Randomizer catalog and installed-plugin icon.",
+        "targetAbi": "10.10.7.0",
+        "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.12/Jellyfin.Plugin.Randomizer_0.1.0.12.zip",
+        "checksum": "",
+        "timestamp": "2026-10-09T00:00:00Z"
+      },
       {
         "version": "0.1.0.11",
         "changelog": "Make Jellyfin plugin Enable/Disable take effect immediately without a server restart.",
@@ -27,7 +36,7 @@
         "version": "0.1.0.9",
         "changelog": "Fix Jellyfin plugin Disable/Enable version mismatch.",
         "targetAbi": "10.10.7.0",
-        "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.9/Jellyfin.Plugin.Randomizer_0.1.0.9.zip",
+        "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.9/Jellyfin.Plugin.Randomizer_0.1.0.9/Jellyfin.Plugin.Randomizer_0.1.0.9.zip",
         "checksum": "c7bb89dc524c5a7da9c1a796a5c74dc9",
         "timestamp": "2026-10-09T00:00:00Z"
       },
