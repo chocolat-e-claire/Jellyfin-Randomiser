@@ -182,7 +182,8 @@ try {
   console.log('PASS: standalone Randomizer page loads with the authenticated Jellyfin session');
 
   console.log('== Jellyfin home integration ==');
-  await page.goto('/web/index.html#!/home.html', { waitUntil: 'domcontentloaded' });
+  await page.goto('/web/index.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => location.hash === '#/home.html' && document.body.innerText.includes('Sign Out'), undefined, { timeout: 60000 });
   await waitFor(page.locator('#homePage'), 'home page loads');
   await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button on home');
   await page.locator('[data-randomizer-button]').click();
