@@ -244,12 +244,18 @@ try {
   await page.locator('[data-randomizer-button]').click();
   await waitFor(page.locator('#jfr'), 'Movies Randomizer modal reopens');
   await waitFor(page.locator('#jfr-genre'), 'Movies genre filter');
-  await page.waitForFunction(() => [...document.querySelectorAll('#jfr-lib option')].some(o => o.textContent === 'Allowed Movies'), undefined, { timeout: 15000 });
-  await page.waitForFunction(() => [...document.querySelectorAll('#jfr-genre option')].some(o => o.textContent === 'Action'), undefined, { timeout: 15000 });
+  // The first modal interactions also exercise asynchronous API calls. Wait on the actual
+  // library value and genre payload rather than a visible but still-empty select.
+  await page.waitForFunction(() => {
+    const library = document.querySelector('#jfr-lib');
+    const genre = document.querySelector('#jfr-genre');
+    return library && library.options.length > 1 &&
+      [...library.options].some(o => o.textContent === 'Allowed Movies') &&
+      genre && [...genre.options].some(o => o.textContent === 'Action');
+  }, undefined, { timeout: 30000 });
   const movieGenres = await page.locator('#jfr-genre option').allTextContents();
   if (!movieGenres.includes('Action') || !movieGenres.includes('Comedy')) {
-    const debug = await page.evaluate(() => JSON.stringify({ options: [...document.querySelectorAll('#jfr-genre option')].map(o => o.textContent), resultText: document.querySelector('#jfr-results')?.textContent }));
-    throw new Error('Movies genre filter did not expose expected genres: ' + debug);
+    throw new Error(`Movies genre filter did not expose expected genres: ${movieGenres.join(', ')}`);
   }
   await page.locator('#jfr-genre').selectOption({ label: 'Action' });
   await page.waitForTimeout(500);
