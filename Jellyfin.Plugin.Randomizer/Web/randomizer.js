@@ -114,7 +114,8 @@
             (type === 'Movie' ? 'Movies' : 'TV Shows') +
             '</h2><button class="jfr-close" aria-label="Close">×</button></div>' +
             '<select id="jfr-lib" aria-label="Library"></select>' +
-            '<input id="jfr-q" class="jfr-search" placeholder="Search titles" aria-label="Search titles">' +
+            '<select id="jfr-genre" aria-label="Genre"><option value="">Select genre…</option></select>' +
+            '<input id="jfr-q" class="jfr-search" placeholder="Search titles" aria-label="Search titles" disabled>' +
             '<div id="jfr-results" class="jfr-results"></div>' +
             '<div class="jfr-controls">' +
             (type === 'Series'
@@ -164,7 +165,8 @@
             window.__jfrSearchTimer = setTimeout(() => search(dialog), 250);
         });
 
-        dialog.querySelector('#jfr-lib').addEventListener('change', () => search(dialog));
+        dialog.querySelector('#jfr-lib').addEventListener('change', () => loadGenres(dialog));
+        dialog.querySelector('#jfr-genre').addEventListener('change', () => search(dialog));
         dialog.querySelector('[name="jfr-mode"]')?.addEventListener('change', () => search(dialog));
         dialog.querySelector('.jfr-go').addEventListener('click', () => randomize(dialog));
 
@@ -178,18 +180,61 @@
             const libraries = await getJson('/Randomizer/Libraries');
             select.innerHTML = '<option value="">Entire accessible library</option>' +
                 libraries.map(x => '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>').join('');
-            await search(dialog);
+            await loadGenres(dialog);
         } catch (error) {
             console.error('Jellyfin Randomizer libraries failed', error);
             dialog.querySelector('#jfr-results').textContent = 'Unable to load accessible libraries.';
         }
     }
 
+    async function loadGenres(dialog) {
+        const genreSelect = dialog.querySelector('#jfr-genre');
+        const searchBox = dialog.querySelector('#jfr-q');
+        const goButton = dialog.querySelector('.jfr-go');
+
+        genreSelect.innerHTML = '<option value="">Select genre…</option>';
+        searchBox.value = '';
+        searchBox.disabled = true;
+        goButton.disabled = true;
+        dialog.querySelector('#jfr-results').innerHTML = '<span>Select a genre to see titles.</span>';
+
+        const query = new URLSearchParams({ itemType: type });
+        const libraryId = dialog.querySelector('#jfr-lib').value;
+        if (libraryId) {
+            query.set('libraryId', libraryId);
+        }
+
+        try {
+            const genres = await getJson('/Randomizer/Genres?' + query);
+            genreSelect.innerHTML =
+                '<option value="">Select genre…</option>' +
+                genres.map(genre => '<option value="' + esc(genre) + '">' + esc(genre) + '</option>').join('');
+        } catch (error) {
+            console.error('Jellyfin Randomizer genres failed', error);
+            dialog.querySelector('#jfr-results').textContent = 'Unable to load genres.';
+        }
+    }
+
     async function search(dialog) {
+        const genre = dialog.querySelector('#jfr-genre').value;
+        const searchBox = dialog.querySelector('#jfr-q');
+        const goButton = dialog.querySelector('.jfr-go');
+
+        if (!genre) {
+            searchBox.disabled = true;
+            goButton.disabled = true;
+            dialog.querySelector('#jfr-results').innerHTML = '<span>Select a genre to see titles.</span>';
+            return;
+        }
+
+        searchBox.disabled = false;
+        goButton.disabled = false;
+
         const query = new URLSearchParams({
             itemType: type,
-            search: dialog.querySelector('#jfr-q').value || '',
-            limit: '100'
+            genre,
+            search: searchBox.value || '',
+            limit: '0'
         });
 
         const libraryId = dialog.querySelector('#jfr-lib').value;
@@ -219,6 +264,7 @@
         const body = {
             mode,
             libraryId: dialog.querySelector('#jfr-lib').value || null,
+            genre: dialog.querySelector('#jfr-genre').value || null,
             itemIds: ids,
             strategy: dialog.querySelector('#jfr-strategy')?.value || C.DefaultEpisodeStrategy || 'EqualEpisode',
             watched: dialog.querySelector('#jfr-watched').value,
