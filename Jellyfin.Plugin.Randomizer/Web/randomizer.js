@@ -149,7 +149,7 @@
             '<option value="0">No history avoidance</option><option value="1">Avoid 1 recent</option>' +
             '<option value="5">Avoid 5 recent</option><option value="10">Avoid 10 recent</option>' +
             '<option value="20">Avoid 20 recent</option></select>' +
-            '</div><div class="jfr-actions">'
+            '</div><div class="jfr-actions">' +
             '<button class="jfr-close2">Cancel</button><button class="jfr-go">Randomize</button>' +
             '</div></div>';
 
