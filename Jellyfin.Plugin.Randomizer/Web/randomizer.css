@@ -31,3 +31,6 @@
 @keyframes jfr-spin{to{transform:rotate(360deg)}}
 @media(max-width:600px){.jfr-backdrop{padding:.5rem}.jfr-modal{padding:.85rem;border-radius:14px;max-height:94vh}.jfr-head h2{font-size:1.2rem}.jfr-actions button{flex:1}.jfr-controls{gap:.4rem}}
 @media(prefers-reduced-motion:reduce){.jfr-modal button,.jfr-die{transition:none;animation:none}}
+
+/* Keep the viewport width steady as the results page grows or shrinks. */
+html{scrollbar-gutter:stable}
