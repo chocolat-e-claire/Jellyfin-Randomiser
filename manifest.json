@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/chocolat-e-claire/Jellyfin-Randomiser/main/assets/jellyfin-randomizer.jpg",
     "versions": [
       {
+        "version": "0.1.0.18",
+        "changelog": "See the GitHub release notes for this version.",
+        "targetAbi": "10.10.7.0",
+        "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.18/Jellyfin.Plugin.Randomizer_0.1.0.18.zip",
+        "checksum": "0ace3447f9012ad849969cf7c7a1de68",
+        "timestamp": null
+      },
+      {
         "version": "0.1.0.17",
         "changelog": "See the GitHub release notes for this version.",
         "targetAbi": "10.10.7.0",
