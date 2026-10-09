@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using Jellyfin.Data.Entities;
 using Jellyfin.Plugin.Randomizer.Services;
-using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -95,12 +94,10 @@ public sealed class RandomizerController : ControllerBase
             : Unauthorized();
     }
 
-    [HttpGet("Search")]
-    public ActionResult<IReadOnlyList<LibraryDto>> Search(
+    [HttpGet("Genres")]
+    public ActionResult<IReadOnlyList<string>> Genres(
         Guid? libraryId,
-        string itemType,
-        string? search = null,
-        int limit = 50)
+        string itemType)
     {
         if (!IsEnabled())
         {
@@ -114,7 +111,32 @@ public sealed class RandomizerController : ControllerBase
         }
 
         return Current() is { } u
-            ? Ok(service.Search(u, libraryId, itemType, search, limit))
+            ? Ok(service.Genres(u, libraryId, itemType))
+            : Unauthorized();
+    }
+
+    [HttpGet("Search")]
+    public ActionResult<RandomizerSearchResult> Search(
+        Guid? libraryId,
+        string itemType,
+        string? search = null,
+        string? genre = null,
+        int startIndex = 0,
+        int limit = 100)
+    {
+        if (!IsEnabled())
+        {
+            return NotFound();
+        }
+
+        if (!itemType.Equals("Movie", StringComparison.OrdinalIgnoreCase)
+            && !itemType.Equals("Series", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest("itemType must be Movie or Series.");
+        }
+
+        return Current() is { } u
+            ? Ok(service.Search(u, libraryId, itemType, search, genre, startIndex, limit))
             : Unauthorized();
     }
 
