@@ -99,6 +99,15 @@ await context.addInitScript(({ serverId, baseUrl, token, me }) => {
 }, { serverId, baseUrl, token, me });
 
 const page = await context.newPage();
+page.on('response', async response => {
+  if (/\/Randomizer\/(Genres|Libraries|Search)/.test(response.url())) {
+    try {
+      console.log('GENRE RESPONSE ' + response.status() + ' ' + response.url() + ' body=' + (await response.text()).slice(0, 1200));
+    } catch (error) {
+      console.log('GENRE RESPONSE BODY READ FAILED: ' + String(error));
+    }
+  }
+});
 
 async function establishJellyfinWebSession() {
   await page.goto('/web/index.html', { waitUntil: 'domcontentloaded' });
@@ -181,6 +190,53 @@ try {
   await standalonePage.close();
   console.log('PASS: standalone Randomizer page loads with the authenticated Jellyfin session');
 
+  console.log('== Jellyfin home integration ==');
+  await page.waitForFunction(() => location.hash === '#/home.html' && document.body.innerText.includes('Sign Out'), undefined, { timeout: 60000 });
+  await page.waitForFunction(() => {
+    const home = document.querySelector('#indexPage.homePage');
+    return home && getComputedStyle(home).display !== 'none' && home.getBoundingClientRect().width > 0;
+  }, undefined, { timeout: 60000 });
+  await waitFor(page.locator('#indexPage.homePage'), 'home page loads');
+  await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button on home');
+  await page.locator('[data-randomizer-button]').click();
+  await waitFor(page.locator('#jfr'), 'full Randomizer modal opens from home');
+  await waitFor(page.locator('#jfr-type'), 'home modal content type selector');
+  await page.locator('#jfr-type').selectOption('Series');
+  await waitFor(page.locator('#jfr-strategy'), 'TV-specific controls appear after choosing TV Shows');
+  await page.locator('#jfr-type').selectOption('Movie');
+  if (await page.locator('#jfr-strategy').count() !== 0) {
+    throw new Error('TV-specific controls remained after switching back to Movies.');
+  }
+  await page.locator('.jfr-close').click();
+  console.log('PASS: home button opens full Randomizer and content type selector switches modes');
+
+  console.log('== Jellyfin library integration ==');
+  const adminToken = await page.evaluate(async () => {
+    const auth = await fetch('/Users/AuthenticateByName', {
+      method: 'POST',
+      headers: {
+        Authorization: 'MediaBrowser Client="Jellyfin Randomizer Browser CI admin", DeviceId="jfr-browser-ci-admin", Device="Playwright", Version="10.10.7"',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ Username: 'ci-admin', Pw: 'ci-admin-password' })
+    });
+    if (!auth.ok) throw new Error('Admin authentication failed: HTTP ' + auth.status);
+    return (await auth.json()).AccessToken;
+  });
+  const allowedLibrary = await fetch(new URL('/Library/VirtualFolders', baseUrl), { headers: { 'X-Emby-Token': adminToken } });
+  if (!allowedLibrary.ok) {
+    throw new Error(`Unable to read library folders: HTTP ${allowedLibrary.status}`);
+  }
+  const folders = await allowedLibrary.json();
+  const movieLibrary = folders.find(folder => /Allowed Movies/i.test(folder.Name));
+  if (!movieLibrary?.ItemId) {
+    throw new Error('Could not resolve the synthetic movie library for library-page button acceptance.');
+  }
+  await page.goto('/web/index.html#!/movies.html?topParentId=' + encodeURIComponent(movieLibrary.ItemId), { waitUntil: 'domcontentloaded' });
+  await waitFor(page.locator('#moviesPage'), 'library-scoped Movies page loads');
+  await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button on a library page');
+  console.log('PASS: Randomize button is available inside a library-scoped page');
+
   console.log('== Jellyfin Movies integration ==');
   await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
   await waitFor(page.locator('#moviesPage'), 'Movies page loads');
@@ -188,6 +244,10 @@ try {
   await page.locator('[data-randomizer-button]').click();
   await waitFor(page.locator('#jfr'), 'Movies Randomizer modal reopens');
   await waitFor(page.locator('#jfr-genre'), 'Movies genre filter');
+  // The modal's content is valid here even when the library list is still loading;
+  // select the explicit movie content type to make the intended assertion deterministic.
+  await page.locator('#jfr-type').selectOption('Movie');
+  await page.waitForFunction(() => [...document.querySelectorAll('#jfr-genre option')].some(o => o.textContent === 'Action'), undefined, { timeout: 15000 });
   const movieGenres = await page.locator('#jfr-genre option').allTextContents();
   if (!movieGenres.includes('Action') || !movieGenres.includes('Comedy')) {
     throw new Error(`Movies genre filter did not expose expected genres: ${movieGenres.join(', ')}`);
@@ -206,6 +266,7 @@ try {
     throw new Error('Movie Play test could not resolve the fixture item id.');
   }
 
+  await waitFor(page.locator('.jfr-go'), 'Movies Randomizer choose button appears');
   await page.locator('.jfr-go').click();
   await waitFor(page.locator('#jfr-play'), 'Movies result Play button appears');
   const playRoutePromise = page.waitForFunction(
