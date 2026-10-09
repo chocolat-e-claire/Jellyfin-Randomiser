@@ -235,7 +235,11 @@ try {
   await page.locator('[data-randomizer-button]').click();
   await waitFor(page.locator('#jfr'), 'Movies Randomizer modal reopens');
   await waitFor(page.locator('#jfr-genre'), 'Movies genre filter');
-  await page.waitForFunction(() => [...document.querySelectorAll('#jfr-genre option')].some(o => o.textContent === 'Action'), undefined, { timeout: 15000 });
+  await page.waitForFunction(() => {
+    const options = [...document.querySelectorAll('#jfr-genre option')].map(o => o.textContent);
+    const results = document.querySelector('#jfr-results');
+    return options.includes('Action') && options.includes('Comedy') && results && !results.textContent.includes('Unable to load genres');
+  }, undefined, { timeout: 15000 });
   const movieGenres = await page.locator('#jfr-genre option').allTextContents();
   if (!movieGenres.includes('Action') || !movieGenres.includes('Comedy')) {
     throw new Error(`Movies genre filter did not expose expected genres: ${movieGenres.join(', ')}`);
