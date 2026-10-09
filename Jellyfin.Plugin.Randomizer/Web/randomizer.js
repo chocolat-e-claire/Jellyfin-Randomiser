@@ -346,6 +346,13 @@
             return false;
         }
 
+        // File Transformation injects this script into index.html, including the
+        // unauthenticated login route. Do not initialize plugin APIs, observers, or
+        // polling until Jellyfin Web has an authenticated user session.
+        if (typeof API.getCurrentUserId !== 'function' || !API.getCurrentUserId()) {
+            return false;
+        }
+
         started = true;
 
         API.getPluginConfiguration(CONFIG_ID)
