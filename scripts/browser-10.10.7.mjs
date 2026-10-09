@@ -183,16 +183,11 @@ try {
 
   console.log('== Jellyfin home integration ==');
   await page.waitForFunction(() => location.hash === '#/home.html' && document.body.innerText.includes('Sign Out'), undefined, { timeout: 60000 });
-  await page.evaluate(() => {
-    location.hash = '#/home.html';
-  });
-  await page.waitForTimeout(1000);
-  const homeState = await page.evaluate(() => ({
-    hash: location.hash,
-    pageIds: [...document.querySelectorAll('.page')].map(el => ({ id: el.id, className: el.className, style: el.getAttribute('style') }))
-  }));
-  console.log('Home route DOM: ' + JSON.stringify(homeState));
-  await waitFor(page.locator('#homePage'), 'home page loads');
+  await page.waitForFunction(() => {
+    const home = document.querySelector('#indexPage.homePage');
+    return home && getComputedStyle(home).display !== 'none' && home.getBoundingClientRect().width > 0;
+  }, undefined, { timeout: 60000 });
+  await waitFor(page.locator('#indexPage.homePage'), 'home page loads');
   await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button on home');
   await page.locator('[data-randomizer-button]').click();
   await waitFor(page.locator('#jfr'), 'full Randomizer modal opens from home');
