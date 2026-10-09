@@ -144,7 +144,7 @@ try {
   await waitFor(standalonePage.locator('#genre'), 'standalone genre selector');
   await waitFor(standalonePage.locator('#search'), 'standalone search box');
   await waitFor(standalonePage.locator('#randomize'), 'standalone randomize button');
-  const scrollbarGutter = await standalonePage.evaluate(() => getComputedStyle(document.documentElement).scrollbarGutter);
+  const scrollbarState = await standalonePage.evaluate(() => ({\n    gutter: getComputedStyle(document.documentElement).scrollbarGutter,\n    overflowY: getComputedStyle(document.documentElement).overflowY,\n    resultsGutter: getComputedStyle(document.querySelector('.results')).scrollbarGutter\n  }));
   if (scrollbarGutter !== 'stable') {
     throw new Error(`Standalone results page scrollbar gutter is not stable: ${scrollbarGutter}`);
   }
