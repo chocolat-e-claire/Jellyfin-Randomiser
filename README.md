@@ -2,6 +2,14 @@
 
 Jellyfin plugin targeting **Jellyfin Server 10.10.7 / target ABI 10.10.7.0 / .NET 8**.
 
+## Plugin Repository
+
+Add the following repository URL in Jellyfin under **Dashboard → Plugins → Repositories**:
+
+**https://raw.githubusercontent.com/chocolat-e-claire/Jellyfin-Randomiser/main/manifest.json**
+
+This is the repository manifest URL to use when installing or updating Jellyfin Randomizer.
+
 ## Features
 
 - Random movie.
