@@ -250,6 +250,10 @@ try {
   await waitFor(page.locator('#jfr-details'), 'TV episode result appears');
 
   const resultText = await page.locator('.jfr-result').innerText();
+  if (await page.locator('.jfr-die').count() !== 0) {
+    throw new Error('TV result should not display a rolling dice animation');
+  }
+  console.log('PASS: TV result displays without dice animation');
   if (!/Test Show A|Test Show B/i.test(resultText)) {
     throw new Error(`TV result did not contain a fixture show name: ${resultText}`);
   }
