@@ -29,7 +29,6 @@ jobs:
           set -euo pipefail
           META_VERSION="$(python3 -c 'import json; print(json.load(open("Jellyfin.Plugin.Randomizer/meta.json"))["version"])')"
           PROJECT_VERSION="$(sed -n 's/.*<Version>\([^<]*\)<\/Version>.*/\1/p' Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj)"
-          PACKAGE_VERSION="$(python3 -c 'import json; print(json.load(open("package/Jellyfin.Plugin.Randomizer.deps.json"))["runtimeTarget"]["name"].split(",")[0].split("/")[1])' 2>/dev/null || true)"
           test "$META_VERSION" = "$PROJECT_VERSION"
           VERSION="$META_VERSION"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
