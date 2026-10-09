@@ -139,7 +139,7 @@ public sealed class RandomizerController : ControllerBase
     }
 
     private static bool IsEnabled() =>
-        Plugin.Instance?.Configuration.Enabled != false;
+        Plugin.Instance?.IsRuntimeEnabled == true;
 
     private User? Current()
     {
