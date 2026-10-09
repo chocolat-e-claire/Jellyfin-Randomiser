@@ -37,7 +37,7 @@
     }
 
     function activePage() {
-        return document.querySelector('.page:not(.hide)');
+        return document.querySelector('.page:not(.hide)') || document.querySelector('.page:not([style*="display: none"])');
     }
 
     function pageType() {
