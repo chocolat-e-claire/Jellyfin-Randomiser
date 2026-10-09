@@ -271,6 +271,9 @@ import json, os
 items = json.loads(os.environ["SEARCH_CAPPED"])
 print("Search limit=1000 returned:", len(items), "items")
 assert len(items) <= 100, items
+names = [x.get("name", x.get("Name")) for x in items]
+assert names == sorted(names, key=lambda value: value.casefold()), names
+print("Alphabetical search order verified.")
 PY
 
 
