@@ -95,12 +95,10 @@ public sealed class RandomizerController : ControllerBase
             : Unauthorized();
     }
 
-    [HttpGet("Search")]
-    public ActionResult<IReadOnlyList<LibraryDto>> Search(
+    [HttpGet("Genres")]
+    public ActionResult<IReadOnlyList<string>> Genres(
         Guid? libraryId,
-        string itemType,
-        string? search = null,
-        int limit = 50)
+        string itemType)
     {
         if (!IsEnabled())
         {
@@ -114,7 +112,31 @@ public sealed class RandomizerController : ControllerBase
         }
 
         return Current() is { } u
-            ? Ok(service.Search(u, libraryId, itemType, search, limit))
+            ? Ok(service.Genres(u, libraryId, itemType))
+            : Unauthorized();
+    }
+
+    [HttpGet("Search")]
+    public ActionResult<IReadOnlyList<LibraryDto>> Search(
+        Guid? libraryId,
+        string itemType,
+        string? genre = null,
+        string? search = null,
+        int limit = 0)
+    {
+        if (!IsEnabled())
+        {
+            return NotFound();
+        }
+
+        if (!itemType.Equals("Movie", StringComparison.OrdinalIgnoreCase)
+            && !itemType.Equals("Series", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest("itemType must be Movie or Series.");
+        }
+
+        return Current() is { } u
+            ? Ok(service.Search(u, libraryId, itemType, genre, search, limit))
             : Unauthorized();
     }
 
