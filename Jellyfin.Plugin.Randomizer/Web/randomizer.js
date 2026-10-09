@@ -327,6 +327,21 @@
         window.requestAnimationFrame(addButton);
     }
 
+    async function syncRuntimeState() {
+        try {
+            const status = await getJson('/Randomizer/Status');
+            C.enabled = status?.enabled === true;
+
+            if (!C.enabled) {
+                document.getElementById('jfr')?.remove();
+            }
+        } catch (error) {
+            console.error('Jellyfin Randomizer runtime state check failed', error);
+        }
+
+        refresh();
+    }
+
     function start() {
         if (started) {
             return true;
@@ -354,7 +369,9 @@
         new MutationObserver(refresh).observe(document.body, { childList: true, subtree: true });
         window.addEventListener('hashchange', refresh);
         window.setInterval(refresh, 1000);
+        window.setInterval(syncRuntimeState, 1000);
         refresh();
+        syncRuntimeState();
         return true;
     }
 

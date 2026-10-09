@@ -12,7 +12,9 @@ namespace Jellyfin.Plugin.Randomizer.Controllers;
 [Route("Randomizer")]
 public sealed class RandomizerController : ControllerBase
 {
-    private const string PageResource = "Jellyfin.Plugin.Randomizer.Configuration.randomizerPage.html";
+    private const string PageResource =
+        "Jellyfin.Plugin.Randomizer.Configuration.randomizerPage.html";
+
     private readonly IUserManager users;
     private readonly RandomizerService service;
 
@@ -20,6 +22,16 @@ public sealed class RandomizerController : ControllerBase
     {
         users = u;
         service = s;
+    }
+
+    [AllowAnonymous]
+    [HttpGet("Status")]
+    public IActionResult Status()
+    {
+        return Ok(new
+        {
+            enabled = Plugin.Instance?.IsRuntimeEnabled == true
+        });
     }
 
     [HttpGet("Page")]
@@ -30,7 +42,8 @@ public sealed class RandomizerController : ControllerBase
             return NotFound();
         }
 
-        using var stream = typeof(Plugin).Assembly.GetManifestResourceStream(PageResource);
+        using var stream =
+            typeof(Plugin).Assembly.GetManifestResourceStream(PageResource);
         if (stream is null)
         {
             return NotFound();
@@ -96,7 +109,9 @@ public sealed class RandomizerController : ControllerBase
     }
 
     [HttpGet("Genres")]
-    public ActionResult<IReadOnlyList<GenreDto>> Genres(Guid? libraryId, string itemType)
+    public ActionResult<IReadOnlyList<GenreDto>> Genres(
+        Guid? libraryId,
+        string itemType)
     {
         if (!IsEnabled())
         {
@@ -139,7 +154,8 @@ public sealed class RandomizerController : ControllerBase
     }
 
     [HttpPost("Randomize")]
-    public ActionResult<RandomizeResult> Randomize([FromBody] RandomizeRequest request)
+    public ActionResult<RandomizeResult> Randomize(
+        [FromBody] RandomizeRequest request)
     {
         if (!IsEnabled())
         {
@@ -159,7 +175,7 @@ public sealed class RandomizerController : ControllerBase
     }
 
     private static bool IsEnabled() =>
-        Plugin.Instance?.Configuration.Enabled != false;
+        Plugin.Instance?.IsRuntimeEnabled == true;
 
     private User? Current()
     {
@@ -170,8 +186,12 @@ public sealed class RandomizerController : ControllerBase
 
         var value = User.Claims.FirstOrDefault(c =>
             c.Type == ClaimTypes.NameIdentifier
-            || c.Type.Equals("Jellyfin-UserId", StringComparison.OrdinalIgnoreCase)
-            || c.Type.Equals("UserId", StringComparison.OrdinalIgnoreCase))?.Value;
+            || c.Type.Equals(
+                "Jellyfin-UserId",
+                StringComparison.OrdinalIgnoreCase)
+            || c.Type.Equals(
+                "UserId",
+                StringComparison.OrdinalIgnoreCase))?.Value;
 
         return Guid.TryParse(value, out var id)
             ? users.GetUserById(id)
