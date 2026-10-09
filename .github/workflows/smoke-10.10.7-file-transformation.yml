@@ -27,7 +27,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(python3 -c 'import json; print(json.load(open("Jellyfin.Plugin.Randomizer/meta.json"))["version"])')"
+          META_VERSION="$(python3 -c 'import json; print(json.load(open("Jellyfin.Plugin.Randomizer/meta.json"))["version"])')"
+          PROJECT_VERSION="$(sed -n 's/.*<Version>\([^<]*\)<\/Version>.*/\1/p' Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj)"
+          test "$META_VERSION" = "$PROJECT_VERSION"
+          VERSION="$META_VERSION"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Generate synthetic media fixtures
