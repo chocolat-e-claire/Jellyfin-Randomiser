@@ -132,7 +132,7 @@ public sealed class RandomizerService
             query.Genres = new[] { genre.Trim() };
         }
 
-        query.Limit = limit > 0 ? Math.Clamp(limit, 1, 5000) : null;
+        query.Limit = limit > 0 ? limit : null;
         query.EnableTotalRecordCount = false;
 
         return lib.GetItemList(query)
@@ -203,7 +203,10 @@ public sealed class RandomizerService
         string? genre)
     {
         var shows = r.ItemIds.Count > 0
-            ? r.ItemIds.ToArray()
+            ? lib.GetItemList(Query(u, BaseItemKind.Series, r.LibraryId, r.Watched, genre))
+                .Where(x => r.ItemIds.Contains(x.Id) && !recent.Contains(x.Id))
+                .Select(x => x.Id)
+                .ToArray()
             : lib.GetItemList(Query(u, BaseItemKind.Series, r.LibraryId, r.Watched, genre))
                 .Where(x => !recent.Contains(x.Id))
                 .Select(x => x.Id)
@@ -226,7 +229,7 @@ public sealed class RandomizerService
                     r.Watched,
                     recent,
                     true,
-                    genre);
+                    null);
 
                 if (episode is not null)
                 {
@@ -245,7 +248,7 @@ public sealed class RandomizerService
             r.Watched,
             recent,
             true,
-            genre);
+            null);
     }
 
     private BaseItem? Pick(
