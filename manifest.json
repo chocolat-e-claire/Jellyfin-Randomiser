@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "0.1.0.10",
+        "changelog": "Add genre-first filtering and full alphabetical search.",
+        "targetAbi": "10.10.7.0",
+        "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.10/Jellyfin.Plugin.Randomizer_0.1.0.10.zip",
+        "checksum": "fdeb4780b5b038c3eefa76e034ead4fc",
+        "timestamp": "2026-10-09T00:00:00Z"
+      },
+      {
         "version": "0.1.0.9",
         "changelog": "Fix Jellyfin plugin Disable/Enable version mismatch.",
         "targetAbi": "10.10.7.0",
