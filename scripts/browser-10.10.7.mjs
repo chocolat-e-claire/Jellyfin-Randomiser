@@ -99,6 +99,15 @@ await context.addInitScript(({ serverId, baseUrl, token, me }) => {
 }, { serverId, baseUrl, token, me });
 
 const page = await context.newPage();
+page.on('response', async response => {
+  if (response.url().includes('/Randomizer/Genres')) {
+    try {
+      console.log('GENRE RESPONSE ' + response.status() + ' ' + response.url() + ' body=' + (await response.text()).slice(0, 1200));
+    } catch (error) {
+      console.log('GENRE RESPONSE BODY READ FAILED: ' + String(error));
+    }
+  }
+});
 
 async function establishJellyfinWebSession() {
   await page.goto('/web/index.html', { waitUntil: 'domcontentloaded' });
