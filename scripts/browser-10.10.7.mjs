@@ -156,6 +156,13 @@ try {
   await page.locator('[data-randomizer-button]').click();
   await waitFor(page.locator('#jfr'), 'Movies Randomizer modal reopens');
 
+  await page.locator('#jfr-genre').selectOption({ label: 'Comedy' });
+  await page.waitForTimeout(300);
+  const movieGenreResults = await page.locator('#jfr-results input[type="checkbox"]').count();
+  if (movieGenreResults !== 2) {
+    throw new Error(`Comedy genre should show both fixture movies, got ${movieGenreResults}`);
+  }
+  console.log('PASS: Movies genre filter returns the complete Comedy list');
   await page.locator('#jfr-q').fill('Allowed Movie 1');
   await page.waitForTimeout(500);
   await waitForSingle(page, '#jfr-results input[type="checkbox"]', 'movie search returns one fixture for Play');
@@ -195,6 +202,13 @@ try {
 
   await page.locator('[data-randomizer-button]').click();
   await waitFor(page.locator('#jfr'), 'TV Randomizer modal opens');
+  await page.locator('#jfr-genre').selectOption({ label: 'Comedy' });
+  await page.waitForTimeout(300);
+  const tvGenreResults = await page.locator('#jfr-results input[type="checkbox"]').count();
+  if (tvGenreResults !== 2) {
+    throw new Error(`Comedy genre should show both fixture TV shows, got ${tvGenreResults}`);
+  }
+  console.log('PASS: TV genre filter returns the complete Comedy list');
   await page.locator('#jfr-q').fill('Test Show');
   await page.waitForTimeout(500);
   const showSearchCount = await page.locator('#jfr-results input[type="checkbox"]').count();
