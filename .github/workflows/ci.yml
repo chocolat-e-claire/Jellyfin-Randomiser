@@ -22,6 +22,21 @@ jobs:
         run: dotnet build Jellyfin.Plugin.Randomizer/Jellyfin.Plugin.Randomizer.csproj --configuration Release --no-restore
       - name: Test
         run: dotnet test Tests/Jellyfin.Plugin.Randomizer.Tests.csproj --configuration Release --no-restore
+      - name: Verify catalog icon metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s images/randomizer.svg
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path("manifest.json").read_text(encoding="utf-8"))
+          plugin = manifest[0]
+          assert plugin["imageUrl"].endswith("/images/randomizer.svg")
+          assert any(v["version"] == "0.1.0.12" for v in plugin["versions"])
+          print("Catalog icon:", plugin["imageUrl"])
+          PY
+
       - name: Package
         shell: bash
         run: |
