@@ -501,37 +501,87 @@ echo "Inaccessible library scope status: $INACCESSIBLE_LIBRARY_STATUS"
 echo "== Normal Jellyfin details route =="
 user_get "/Users/$TEST_USER_ID/Items/$ALLOWED_MOVIE_ID" >/dev/null
 
-echo "== Jellyfin plugin-manager Disable/Enable regression check =="
+echo "== Jellyfin plugin-manager live Disable/Enable regression check =="
 PLUGIN_ID="4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41"
 INSTALLED_PLUGINS="$(admin_get '/Plugins')"
 export INSTALLED_PLUGINS PLUGIN_ID VERSION
 PLUGIN_VERSION="$(python3 - <<'PY'
-import json, os
+import json
+import os
+import sys
+
 plugins = json.loads(os.environ["INSTALLED_PLUGINS"])
-print("Installed plugins:", [(p.get("Name"), p.get("Id"), p.get("Version")) for p in plugins], file=__import__("sys").stderr)
-plugin_id = os.environ["PLUGIN_ID"].lower()
+plugin_id = os.environ["PLUGIN_ID"].replace("-", "").lower()
 plugin = next(p for p in plugins if str(p.get("Name", "")).lower() == "jellyfin randomizer")
 actual_id = str(plugin.get("Id", "")).replace("-", "").lower()
-expected_id = plugin_id.replace("-", "")
+expected_id = plugin_id
 assert actual_id == expected_id, (actual_id, expected_id, plugin)
-version = plugin.get("Version")
+version = plugin.get("Version", plugin.get("version"))
 assert version == os.environ["VERSION"], (version, os.environ["VERSION"], plugin)
 print(version)
 PY
 )"
 echo "Jellyfin reports Randomizer version: $PLUGIN_VERSION"
 
-disable_status="$(curl -sS -o "$TMP/plugin-disable.out" -w '%{http_code}' -X POST \
-  -H "X-Emby-Token: $ADMIN_TOKEN" \
-  "$BASE_URL/Plugins/$PLUGIN_ID/$PLUGIN_VERSION/Disable")"
-echo "Plugin-manager Disable status: $disable_status"
+plugin_status_name() {
+  admin_get '/Plugins' | python3 - <<'PY'
+import json
+import sys
+data = json.load(sys.stdin)
+plugin = next(p for p in data if str(p.get("Name", "")).lower() == "jellyfin randomizer")
+value = plugin.get("Status", plugin.get("status"))
+if isinstance(value, int):
+    value = {1: "Restart", 0: "Active", -1: "Disabled"}.get(value, str(value))
+print(value)
+PY
+}
+
+disable_status="$(curl -sS -o "$TMP/plugin-disable.out" -w '%{http_code}' -X POST   -H "X-Emby-Token: $ADMIN_TOKEN"   "$BASE_URL/Plugins/$PLUGIN_ID/$PLUGIN_VERSION/Disable")"
+echo "Plugin-manager Disable HTTP status: $disable_status"
 test "$disable_status" -eq 204
 
-enable_status="$(curl -sS -o "$TMP/plugin-enable.out" -w '%{http_code}' -X POST \
-  -H "X-Emby-Token: $ADMIN_TOKEN" \
-  "$BASE_URL/Plugins/$PLUGIN_ID/$PLUGIN_VERSION/Enable")"
-echo "Plugin-manager Enable status: $enable_status"
+for _ in $(seq 1 50); do
+  status="$(plugin_status_name)"
+  if [ "$status" = "Disabled" ]; then
+    break
+  fi
+  sleep 0.1
+done
+echo "Plugin status after Disable: $(plugin_status_name)"
+test "$(plugin_status_name)" = "Disabled"
+
+disabled_page_status="$(curl -sS -o "$TMP/disabled-plugin-page.out" -w '%{http_code}'   -H "X-Emby-Token: $ADMIN_TOKEN"   "$BASE_URL/Randomizer/Page")"
+echo "Randomizer Page after plugin Disable: $disabled_page_status"
+test "$disabled_page_status" -eq 404
+
+DISABLED_WEB="$(curl -fsS "$BASE_URL/web/index.html")"
+if printf '%s' "$DISABLED_WEB" | grep -Fq 'data-jellyfin-randomizer-loader'; then
+  echo "Randomizer Web loader remained after plugin-manager Disable."
+  exit 1
+fi
+
+enable_status="$(curl -sS -o "$TMP/plugin-enable.out" -w '%{http_code}' -X POST   -H "X-Emby-Token: $ADMIN_TOKEN"   "$BASE_URL/Plugins/$PLUGIN_ID/$PLUGIN_VERSION/Enable")"
+echo "Plugin-manager Enable HTTP status: $enable_status"
 test "$enable_status" -eq 204
+
+for _ in $(seq 1 50); do
+  status="$(plugin_status_name)"
+  if [ "$status" = "Active" ]; then
+    break
+  fi
+  sleep 0.1
+done
+echo "Plugin status after Enable: $(plugin_status_name)"
+test "$(plugin_status_name)" = "Active"
+
+reenabled_page_status="$(curl -sS -o "$TMP/reenabled-plugin-page.out" -w '%{http_code}'   -H "X-Emby-Token: $ADMIN_TOKEN"   "$BASE_URL/Randomizer/Page")"
+echo "Randomizer Page after plugin-manager Enable: $reenabled_page_status"
+test "$reenabled_page_status" -eq 200
+
+REENABLED_WEB="$(curl -fsS "$BASE_URL/web/index.html")"
+loader_count="$(printf '%s' "$REENABLED_WEB" | grep -o 'data-jellyfin-randomizer-loader' | wc -l)"
+echo "Re-enabled Randomizer loader tag count: $loader_count"
+test "$loader_count" -eq 2
 
 echo "== Disable Randomizer and verify complete shutdown =="
 CURRENT_CONFIG="$(admin_get '/Plugins/4e1a3b62-3d7f-4d8f-a0a9-2f2f3c9d7c41/Configuration')"
