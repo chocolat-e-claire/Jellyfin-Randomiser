@@ -346,6 +346,19 @@
             return false;
         }
 
+        // File Transformation injects this script into index.html, including the
+        // unauthenticated login route. Do not initialize plugin APIs, observers, or
+        // polling until Jellyfin Web has an authenticated user session.
+        // ApiClient can exist on the login route before a user session does.
+        // Treat errors while Jellyfin Web is still bootstrapping as unauthenticated.
+        try {
+            if (typeof API.getCurrentUserId !== 'function' || !API.getCurrentUserId()) {
+                return false;
+            }
+        } catch {
+            return false;
+        }
+
         started = true;
 
         API.getPluginConfiguration(CONFIG_ID)
@@ -369,18 +382,11 @@
         return true;
     }
 
-    let attempts = 0;
+    // A user may remain on the login page for longer than 30 seconds. Keep this
+    // lightweight gate alive so the plugin starts after login without requiring a reload.
     const timer = window.setInterval(() => {
         if (start()) {
             window.clearInterval(timer);
-            return;
         }
-
-        attempts += 1;
-        if (attempts >= 300) {
-            window.clearInterval(timer);
-            console.warn('Jellyfin Randomizer waited 30 seconds for the Jellyfin Web ApiClient.');
-            window.clearInterval(timer);
-        }
-    }, 100);
+    }, 500);
 }());

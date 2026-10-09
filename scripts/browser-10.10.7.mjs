@@ -69,6 +69,46 @@ if (!me.Id) {
 }
 
 const browserInstance = await chromium.launch({ headless: true });
+
+// Exercise the injected plugin script on a genuinely clean, unauthenticated profile
+// before creating the authenticated profile used by the rest of this acceptance suite.
+const loginContext = await browserInstance.newContext({ baseURL: baseUrl });
+const loginPage = await loginContext.newPage();
+const unauthenticatedRandomizerRequests = [];
+loginPage.on('request', request => {
+  const pathname = new URL(request.url()).pathname;
+  // Loading the injected JS/CSS assets is expected on index.html. Only API calls
+  // (including the anonymous runtime-status endpoint) must wait until login.
+  if (pathname.startsWith('/Randomizer/') &&
+      !/^\/Randomizer\/(Script\.js|Styles\.css)$/.test(pathname)) {
+    unauthenticatedRandomizerRequests.push(request.url());
+  }
+});
+await loginPage.goto('/web/index.html', { waitUntil: 'domcontentloaded' });
+// Jellyfin 10.10.7 may initially show user-selection tiles rather than a password
+// field. Assert that the Web UI has rendered without an authenticated session instead
+// of coupling this regression to one particular login-form layout.
+await loginPage.waitForFunction(() => {
+  const text = document.body?.innerText?.trim() || '';
+  const signedIn = text.includes('Sign Out') || location.hash === '#/home.html';
+  return text.length > 0 && !signedIn;
+}, undefined, { timeout: 60000 });
+await loginPage.waitForTimeout(1500);
+const unauthenticatedState = await loginPage.evaluate(() => ({
+  url: location.href,
+  title: document.title,
+  bodyText: document.body?.innerText?.slice(0, 1000) || '',
+  storedCredentials: localStorage.getItem('jellyfin_credentials')
+}));
+if (unauthenticatedState.storedCredentials !== null) {
+  throw new Error('Unauthenticated browser profile unexpectedly contains Jellyfin credentials.');
+}
+if (unauthenticatedRandomizerRequests.length > 0) {
+  throw new Error('Randomizer made requests before login: ' + unauthenticatedRandomizerRequests.join(', '));
+}
+console.log('PASS: clean unauthenticated Jellyfin Web screen rendered with no Randomizer API requests: ' + JSON.stringify(unauthenticatedState));
+await loginContext.close();
+
 const context = await browserInstance.newContext({
   baseURL: baseUrl
 });
