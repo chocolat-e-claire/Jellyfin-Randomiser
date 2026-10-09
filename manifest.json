@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/chocolat-e-claire/Jellyfin-Randomiser/main/assets/jellyfin-randomizer.jpg",
     "versions": [
       {
+        "version": "0.1.0.14",
+        "changelog": "Reserve the scrollbar gutter on the standalone Randomizer results page to prevent layout width shifts.",
+        "targetAbi": "10.10.7.0",
+        "sourceUrl": "https://github.com/chocolat-e-claire/Jellyfin-Randomiser/releases/download/v0.1.0.14/Jellyfin.Plugin.Randomizer_0.1.0.14.zip",
+        "checksum": "",
+        "timestamp": "2026-10-09T00:00:00Z"
+      },
+      {
         "version": "0.1.0.13",
         "changelog": "Keep the Randomizer results page scrollbar stable to prevent layout width shifts.",
         "targetAbi": "10.10.7.0",
