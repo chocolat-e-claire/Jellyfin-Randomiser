@@ -181,6 +181,22 @@ try {
   await standalonePage.close();
   console.log('PASS: standalone Randomizer page loads with the authenticated Jellyfin session');
 
+  console.log('== Jellyfin home integration ==');
+  await page.goto('/web/index.html#!/home.html', { waitUntil: 'domcontentloaded' });
+  await waitFor(page.locator('#homePage'), 'home page loads');
+  await waitForSingle(page, '[data-randomizer-button]', 'one Randomize button on home');
+  await page.locator('[data-randomizer-button]').click();
+  await waitFor(page.locator('#jfr'), 'full Randomizer modal opens from home');
+  await waitFor(page.locator('#jfr-type'), 'home modal content type selector');
+  await page.locator('#jfr-type').selectOption('Series');
+  await waitFor(page.locator('#jfr-strategy'), 'TV-specific controls appear after choosing TV Shows');
+  await page.locator('#jfr-type').selectOption('Movie');
+  if (await page.locator('#jfr-strategy').count() !== 0) {
+    throw new Error('TV-specific controls remained after switching back to Movies.');
+  }
+  await page.locator('#jfr-close').click();
+  console.log('PASS: home button opens full Randomizer and content type selector switches modes');
+
   console.log('== Jellyfin Movies integration ==');
   await page.goto('/web/index.html#!/movies.html', { waitUntil: 'domcontentloaded' });
   await waitFor(page.locator('#moviesPage'), 'Movies page loads');
