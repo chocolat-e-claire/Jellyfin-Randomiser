@@ -508,9 +508,12 @@ export INSTALLED_PLUGINS PLUGIN_ID VERSION
 PLUGIN_VERSION="$(python3 - <<'PY'
 import json, os
 plugins = json.loads(os.environ["INSTALLED_PLUGINS"])
+print("Installed plugins:", [(p.get("Name"), p.get("Id"), p.get("Version")) for p in plugins])
 plugin_id = os.environ["PLUGIN_ID"].lower()
-plugin = next(p for p in plugins if str(p.get("Id", p.get("id", ""))).lower() == plugin_id)
-version = plugin.get("Version", plugin.get("version"))
+plugin = next(p for p in plugins if str(p.get("Name", "")).lower() == "jellyfin randomizer")
+actual_id = str(plugin.get("Id", "")).lower()
+assert actual_id == plugin_id, (actual_id, plugin_id, plugin)
+version = plugin.get("Version")
 assert version == os.environ["VERSION"], (version, os.environ["VERSION"], plugin)
 print(version)
 PY
