@@ -175,8 +175,9 @@ jobs:
           entry["sourceUrl"] = source_url
           with open(path, "w", encoding="utf-8") as f:
               json.dump(data, f, indent=2)
-              f.write("\\n")
+              f.write("\n")
           PY
+          python3 -m json.tool manifest.json >/dev/null
           if git diff --quiet -- manifest.json; then
             echo "Manifest already contains the published release checksum."
             exit 0
